@@ -12,6 +12,9 @@ Dépose ici une image par personnage, nommée d'après son identifiant :
 - Sans fichier, le personnage garde son avatar à initiales.
 - Reconstruire l'image Docker après ajout : les portraits sont intégrés à l'application.
 
+Les fichiers .svg sont des illustrations originales générées par deploy/portraits/generate.sh.
+Une image .webp/.jpg/.png du même nom passe devant le .svg.
+
 Droits d'auteur : n'ajoute que des images que tu as le droit d'utiliser et de publier
 (dessins personnels, fan art avec l'accord de son auteur, visuels sous licence libre),
 et indique leur source dans le README.

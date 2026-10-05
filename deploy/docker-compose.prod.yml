@@ -35,7 +35,7 @@ services:
     logging: *logging
 
   app:
-    image: ${IMAGE:-asaph01/hxh-guide:1.1}
+    image: ${IMAGE:-asaph01/hxh-guide:1.2}
     restart: unless-stopped
     environment:
       ConnectionStrings__Default: "Host=db;Database=guide;Username=guide;Password=${POSTGRES_PASSWORD}"

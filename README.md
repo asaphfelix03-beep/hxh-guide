@@ -86,7 +86,12 @@ docker compose up --build
 
 Ouvrir http://localhost:8081 (compte `demo@guide.local` / `Demo1234`).
 
-### Ajouter des portraits de personnages (facultatif)
+### Portraits des personnages
+
+Les 21 portraits (`wwwroot/images/personnages/*.svg`) sont des **illustrations originales** dessinées pour ce projet
+(style plat, traits reconnaissables : coiffure, couleurs, accessoires), générées par `deploy/portraits/generate.sh`.
+Aucune image officielle n'est utilisée.
+
 
 Déposer une image par personnage dans `wwwroot/images/personnages/`, nommée d'après son identifiant
 (`gon-freecss.webp`, `killua-zoldyck.webp`…, liste dans `wwwroot/images/personnages/LISEZMOI.md`),

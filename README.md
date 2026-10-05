@@ -6,7 +6,7 @@ Application web en **C# / ASP.NET Core (.NET 10)**, conteneurisée avec **Docker
 |---|---|
 | Code source | https://github.com/asaphfelix03-beep/taskflow |
 | Image Docker | https://hub.docker.com/r/asaph01/taskflow |
-| Application en ligne | http://&lt;IP-PUBLIQUE-EC2&gt; |
+| Application en ligne | http://13.48.46.246 (EC2 t3.micro, région eu-north-1 Stockholm) |
 
 ## 1. Présentation
 

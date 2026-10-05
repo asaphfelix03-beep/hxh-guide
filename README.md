@@ -118,6 +118,15 @@ Le script :
 
 Le script peut être relancé sans risque : il réutilise ce qui existe déjà.
 
+**Sans rien installer : depuis AWS CloudShell** (icône `>_` en haut de la console AWS) :
+
+```bash
+git clone https://github.com/asaphfelix03-beep/taskflow.git && cd taskflow && MY_IP=<IP-de-ton-PC> ./deploy/aws-deploy.sh
+```
+
+`MY_IP` limite le SSH à l'adresse de ton PC (sinon ce serait celle de CloudShell). La clé `taskflow-key.pem`
+est alors créée dans CloudShell : la récupérer via *Actions → Télécharger le fichier* (`taskflow/taskflow-key.pem`).
+
 ### Option B — Dans la console AWS
 
 Console AWS → **EC2** → **Lancer une instance** :

@@ -47,7 +47,8 @@ SG_ID=$(aws ec2 describe-security-groups \
 if [ "$SG_ID" = "None" ]; then
   SG_ID=$(aws ec2 create-security-group --group-name "$SG_NAME" --vpc-id "$VPC_ID" \
     --description "TaskFlow - HTTP public, SSH restreint" --query GroupId --output text)
-  MY_IP=$(curl -fs https://checkip.amazonaws.com | tr -d '[:space:]')
+  # MY_IP peut être fourni (ex. depuis CloudShell, pour autoriser l'IP de ton PC et non celle de CloudShell)
+  MY_IP="${MY_IP:-$(curl -fs https://checkip.amazonaws.com | tr -d '[:space:]')}"
   aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 80 --cidr 0.0.0.0/0 >/dev/null
   aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 22 --cidr "$MY_IP/32" >/dev/null
   echo "==> Security Group $SG_ID créé (port 80 : tout le monde, port 22 : $MY_IP)"

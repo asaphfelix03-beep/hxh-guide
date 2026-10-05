@@ -1,18 +1,16 @@
-@using System.Security.Claims
-@inject IWebHostEnvironment Env
 @{
     var signedIn = User.Identity?.IsAuthenticated == true;
-    var displayName = User.FindFirstValue(AppClaimsPrincipalFactory.DisplayNameClaim) ?? User.Identity?.Name ?? "";
-    var userId = signedIn ? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "" : "";
     var path = Context.Request.Path.Value ?? "/";
     string Active(string prefix) => (prefix == "/" ? path == "/" : path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) ? "active" : "";
+    string? Current(string prefix) => Active(prefix) == "active" ? "page" : null;
 }
 <!DOCTYPE html>
 <html lang="fr" data-bs-theme="light">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@ViewData["Title"] · TaskFlow</title>
+    <title>@ViewData["Title"] · Le Guide H×H</title>
+    <meta name="description" content="Le guide du manga Hunter × Hunter : arcs, personnages, Nen, et ton suivi de lecture tome par tome, sans spoiler." />
     <script>
         // Applique le thème avant l'affichage pour éviter un flash blanc en mode sombre.
         (function () {
@@ -24,83 +22,67 @@
             document.documentElement.setAttribute("data-bs-theme", theme);
         })();
     </script>
+    <link rel="icon" href="~/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="~/fonts/dela-gothic-one-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <script src="~/js/site.js" asp-append-version="true" defer></script>
-    @await RenderSectionAsync("Head", required: false)
 </head>
 <body class="d-flex flex-column min-vh-100">
     <partial name="_IconSprite" />
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
 
-    <nav class="navbar navbar-expand app-navbar border-bottom">
-        <div class="container-xl gap-2">
-            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="/">
-                <span class="brand-mark"><icon name="check2-square" /></span>
-                <span class="d-none d-sm-inline">TaskFlow</span>
+    <header class="app-header">
+        <nav class="container-xl d-flex align-items-center gap-2 gap-md-3" aria-label="Navigation principale">
+            <a class="brand" href="/">
+                <partial name="_BrandMark" />
+                <span class="brand-name">Le Guide H×H</span>
             </a>
 
-            @if (signedIn)
-            {
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link @Active("/")" href="/"><icon name="house" /><span class="d-none d-md-inline ms-1">Tableau de bord</span></a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @Active("/Projects")" href="/Projects"><icon name="kanban" /><span class="d-none d-md-inline ms-1">Projets</span></a>
-                    </li>
-                </ul>
+            <ul class="main-nav">
+                <li><a class="@Active("/Arcs")" aria-current="@Current("/Arcs")" href="/Arcs"><icon name="list-check" /><span>Arcs</span></a></li>
+                <li><a class="@Active("/Personnages")" aria-current="@Current("/Personnages")" href="/Personnages"><icon name="people" /><span>Personnages</span></a></li>
+                <li><a class="@Active("/Nen")" aria-current="@Current("/Nen")" href="/Nen"><icon name="hexagon" /><span>Nen</span></a></li>
+                <li><a class="@Active("/Communaute")" aria-current="@Current("/Communaute")" href="/Communaute"><icon name="trophy" /><span>Communauté</span></a></li>
+            </ul>
 
-                <form class="nav-search d-none d-lg-block" method="get" action="/Search" role="search">
-                    <icon name="search" />
-                    <input class="form-control form-control-sm" type="search" name="q" placeholder="Rechercher une tâche…" aria-label="Rechercher une tâche" />
-                </form>
-                <a class="btn btn-sm btn-ghost d-lg-none" href="/Search" title="Rechercher"><icon name="search" /></a>
-            }
-            else
-            {
-                <div class="me-auto"></div>
-            }
+            <div class="ms-auto d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-ghost" data-theme-toggle title="Changer de thème" aria-label="Changer de thème">
+                    <icon name="moon-stars" class="theme-icon-dark" /><icon name="sun" class="theme-icon-light" />
+                </button>
 
-            <button type="button" class="btn btn-sm btn-ghost" data-theme-toggle title="Changer de thème" aria-label="Changer de thème">
-                <icon name="moon-stars" class="theme-icon-dark" /><icon name="sun" class="theme-icon-light" />
-            </button>
-
-            @if (signedIn)
-            {
-                <div class="d-flex align-items-center gap-2">
-                    <avatar user-id="@userId" name="@displayName" />
-                    <span class="small fw-semibold d-none d-md-inline">@displayName</span>
-                    <form method="post" asp-page="/Account/Logout" class="m-0">
+                @if (signedIn)
+                {
+                    <a class="btn btn-sm btn-primary" href="/Classeur" aria-current="@Current("/Classeur")"><icon name="award" /><span class="d-none d-sm-inline ms-1">Mon classeur</span></a>
+                    <avatar name="@User.DisplayName()" class="d-none d-md-inline-flex" />
+                    <form method="post" asp-page="/Compte/Deconnexion" class="m-0">
                         <button type="submit" class="btn btn-sm btn-ghost" title="Se déconnecter" aria-label="Se déconnecter"><icon name="box-arrow-right" /></button>
                     </form>
-                </div>
-            }
-            else
-            {
-                <a class="btn btn-sm btn-ghost" href="/Account/Login">Connexion</a>
-                <a class="btn btn-sm btn-primary" href="/Account/Register">Créer un compte</a>
-            }
-        </div>
-    </nav>
+                }
+                else
+                {
+                    <a class="btn btn-sm btn-ghost" href="/Compte/Connexion">Connexion</a>
+                    <a class="btn btn-sm btn-primary" href="/Compte/Inscription">S'inscrire</a>
+                }
+            </div>
+        </nav>
+    </header>
 
-    <main class="@(ViewData["FullWidth"] is true ? "container-fluid px-3 px-lg-4" : "container-xl") py-4 flex-grow-1">
+    <main id="contenu" class="container-xl py-4 flex-grow-1">
         @if (TempData["Message"] is string message)
         {
-            <div class="alert alert-success d-flex align-items-center gap-2 py-2" role="status"><icon name="check-circle-fill" /> @message</div>
+            <div class="flash flash-ok" role="status"><icon name="check-circle-fill" /> @message</div>
         }
         @if (TempData["Error"] is string error)
         {
-            <div class="alert alert-danger d-flex align-items-center gap-2 py-2" role="alert"><icon name="exclamation-triangle" /> @error</div>
+            <div class="flash flash-error" role="alert"><icon name="exclamation-triangle" /> @error</div>
         }
         @RenderBody()
     </main>
 
-    <footer class="app-footer border-top">
-        <div class="container-xl py-3 small text-body-secondary d-flex flex-wrap gap-3">
-            <span>TaskFlow v@(AppInfo.Version)</span>
-            <span>Conteneur <code>@Environment.MachineName</code></span>
-            <span>.NET @Environment.Version</span>
-            <span>@Env.EnvironmentName</span>
+    <footer class="app-footer">
+        <div class="container-xl">
+            Guide de fan non officiel, réalisé dans un cadre étudiant. Hunter × Hunter est un manga de Yoshihiro Togashi, publié en France par Kana.
         </div>
     </footer>
 

@@ -1,0 +1,40 @@
+@model NenType?
+@{
+    var slug = Model?.Info().Slug ?? "none";
+}
+
+@* Divination par l'eau : un verre plein, une feuille à la surface. L'animation dépend du type (voir site.css). *@
+<svg class="glass nen-@slug" viewBox="0 0 220 240" role="img"
+     aria-label="@(Model is { } type ? $"Divination par l'eau : {type.Info().WaterSign}" : "Un verre d'eau avec une feuille à la surface")">
+    <defs>
+        <clipPath id="glass-inside-@slug">
+            <path d="M54 26 L66 206 Q68 214 76 214 L144 214 Q152 214 154 206 L166 26 Z" />
+        </clipPath>
+    </defs>
+
+    <ellipse class="glass-shadow" cx="110" cy="226" rx="62" ry="7" />
+    <g clip-path="url(#glass-inside-@slug)">
+        <g class="water">
+            <rect x="40" y="74" width="140" height="160" />
+            <path class="water-surface" d="M40 74 Q75 68 110 74 T180 74 V82 H40 Z" />
+        </g>
+        <g class="impurities">
+            <circle cx="88" cy="130" r="3" /><circle cx="122" cy="150" r="2.5" /><circle cx="104" cy="176" r="3.5" />
+            <circle cx="134" cy="118" r="2" /><circle cx="80" cy="190" r="2.5" /><circle cx="118" cy="198" r="2" />
+        </g>
+    </g>
+    <path class="glass-outline" d="M50 22 L63 207 Q65 218 77 218 L143 218 Q155 218 157 207 L170 22" />
+    <g class="leaf-wrap">
+        <g class="leaf">
+            <path d="M84 72 Q110 56 138 70 Q112 82 84 72 Z" />
+            <path class="leaf-vein" d="M86 72 L136 70" />
+        </g>
+    </g>
+    <g class="drops">
+        <path d="M54 30 q-4 8 0 12 q4 -4 0 -12 Z" /><path d="M166 34 q-4 8 0 12 q4 -4 0 -12 Z" /><path d="M60 50 q-3 6 0 9 q3 -3 0 -9 Z" />
+    </g>
+    <g class="sparks">
+        <path d="M96 52 l3 -8 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 Z" />
+        <path d="M132 40 l2 -5 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 Z" />
+    </g>
+</svg>

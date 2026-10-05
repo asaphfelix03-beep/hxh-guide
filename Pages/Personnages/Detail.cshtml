@@ -1,0 +1,23 @@
+@page "/Personnages/{slug}"
+@model HxhGuide.Pages.Personnages.DetailModel
+@{
+    var c = Model.Character;
+    ViewData["Title"] = Model.State.CanSee(c) || !Model.State.SignedIn ? c.Name : "Personnage masqué";
+    var nen = c.Nen?.Info();
+}
+
+<nav aria-label="Fil d'Ariane" class="small mb-3"><a href="/Personnages">Personnages</a> /</nav>
+
+@if (Model.State.SignedIn && !Model.State.CanSee(c))
+{
+    <details class="spoiler mb-4">
+        <summary><icon name="eye-slash" /> Ce personnage apparaît dans « @c.FirstArc.Title », que tu n'as pas encore atteint. Afficher sa fiche quand même.</summary>
+        <div class="mt-3">
+            <partial name="_CharacterProfile" model="Model" />
+        </div>
+    </details>
+}
+else
+{
+    <partial name="_CharacterProfile" model="Model" />
+}

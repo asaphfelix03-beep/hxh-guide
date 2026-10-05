@@ -1,27 +1,31 @@
-# TaskFlow — Gestion de projets en équipe, conteneurisée et déployée sur AWS
+# Le Guide H×H — guide du manga Hunter × Hunter, conteneurisé et déployé sur AWS
 
-Application web collaborative en **C# / ASP.NET Core (.NET 10)** : comptes utilisateurs, projets partagés,
-tableau Kanban avec glisser-déposer. Elle tourne dans **3 conteneurs Docker** (Caddy, application, PostgreSQL)
-sur une instance **AWS EC2**, en **HTTPS**.
+Application web en **C# / ASP.NET Core (.NET 10)** : le guide du manga *Hunter × Hunter* (arcs, personnages, Nen)
+et, pour chaque lecteur, un **suivi de lecture tome par tome sans spoiler**. Elle tourne dans **3 conteneurs Docker**
+(Caddy, application, PostgreSQL) sur une instance **AWS EC2**, en **HTTPS**.
 
 | | Lien |
 |---|---|
 | Application en ligne | https://13-48-46-246.sslip.io |
-| Code source | https://github.com/asaphfelix03-beep/taskflow |
-| Image Docker | https://hub.docker.com/r/asaph01/taskflow |
-| Compte de démonstration | `demo@taskflow.local` / `Demo1234` |
+| Code source | https://github.com/asaphfelix03-beep/hxh-guide |
+| Image Docker | https://hub.docker.com/r/asaph01/hxh-guide |
+| Compte de démonstration | `demo@guide.local` / `Demo1234` (tomes 1 à 24 lus) |
+
+> Guide de fan non officiel, réalisé dans un cadre étudiant. *Hunter × Hunter* est un manga de Yoshihiro Togashi.
+> Aucune image ni page du manga n'est reproduite : tous les textes sont originaux et tous les visuels sont dessinés en CSS/SVG.
 
 ## 1. Fonctionnalités
 
-- **Comptes** : inscription, connexion (mot de passe haché par ASP.NET Core Identity, blocage après 5 échecs), déconnexion
-- **Projets d'équipe** : création, membres invités par e-mail, rôles propriétaire / membre, quitter ou supprimer un projet
-- **Tableau Kanban** : colonnes À faire / En cours / Terminé, **glisser-déposer** enregistré en base, ajout rapide, filtre instantané
-- **Tâches** : description, priorité, échéance (retards en rouge), **assignation** à un membre, **étiquettes** colorées
-- **Tableau de bord** : mes tâches ouvertes, en retard, à rendre sous 7 jours, terminées cette semaine, avancement des projets
-- **Recherche** dans tous ses projets (titre, description, #étiquette), filtres par colonne et « assignées à moi »
-- **Mode sombre**, interface responsive (mobile : colonnes défilables)
-- **API JSON** (`/api/projects`, `/api/projects/{id}/tasks`) réservée aux utilisateurs connectés
-- **Supervision** : `/health` (état de PostgreSQL, version, nom du conteneur)
+- **Les 8 arcs** : frise proportionnelle au nombre de tomes, fiche de chaque arc (tomes, chapitres, résumé), note moyenne et avis des lecteurs
+- **21 personnages** : type de Nen, affiliation, capacité emblématique, arc d'apparition ; filtres par Nen, par arc et par favoris
+- **Mon classeur** : les 38 tomes comme les emplacements de cartes du classeur de Greed Island ; un clic coche un tome lu,
+  ou « j'ai tout lu jusqu'au tome N » ; progression globale et par arc
+- **Mode sans spoiler** : résumé, avis et nouveaux personnages des arcs pas encore atteints sont masqués (affichables d'un clic) ; désactivable
+- **Avis** : une note de 1 à 5 étoiles et un commentaire par arc et par lecteur, modifiable
+- **Favoris** et page **Communauté** : arcs les mieux notés, personnages les plus aimés, derniers avis
+- **Guide du Nen** : les six types, l'hexagone des affinités, la divination par l'eau
+- **Comptes** (inscription, connexion), mode sombre, interface responsive
+- **API JSON** : `/api/arcs` (publique), `/api/moi` (progression du lecteur connecté), `/health` (supervision)
 
 ## 2. Architecture
 
@@ -38,76 +42,58 @@ sur une instance **AWS EC2**, en **HTTPS**.
 │ │   reverse proxy     ASP.NET Core 10    PostgreSQL 17        │ │
 │ │   certificat TLS    port 8080          port 5432            │ │
 │ │   Let's Encrypt     (non exposé)       (non exposé)         │ │
-│ │   compression          │                  │                 │ │
-│ │       │                │                  ▼                 │ │
-│ │   volume caddy_data    │             volume pgdata          │ │
-│ └────────────────────────┼────────────────────────────────────┘ │
-└──────────────────────────┼──────────────────────────────────────┘
-                           │ docker pull
-              Docker Hub : asaph01/taskflow:2.0
+│ │       │                                   │                 │ │
+│ │   volume caddy_data                  volume pgdata          │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                           ▲ docker pull
+              Docker Hub : asaph01/hxh-guide:1.0
 ```
 
-- Seul **Caddy** est exposé à Internet. L'application et la base ne sont joignables que sur le réseau Docker interne.
-- **sslip.io** transforme l'IP en nom de domaine (`13-48-46-246.sslip.io`), ce qui permet un vrai certificat HTTPS gratuit sans acheter de domaine.
-- Le **schéma de la base** est géré par des **migrations EF Core**, appliquées automatiquement au démarrage de l'application.
-- Les **clés de chiffrement des cookies** sont stockées en base : remplacer le conteneur ne déconnecte personne.
-
-**Technologies**
+- Seul **Caddy** est exposé. L'application et la base ne sont joignables que sur le réseau Docker interne.
+- **sslip.io** transforme l'IP en nom de domaine (`13-48-46-246.sslip.io`) : vrai certificat HTTPS gratuit sans acheter de domaine.
+- Le **contenu du manga** (arcs, personnages) est dans le code (`Models/Catalog.cs`) ; la **base** ne stocke que les données des lecteurs
+  (tomes lus, avis, favoris). Schéma géré par **migrations EF Core**, appliquées au démarrage.
 
 | Couche | Choix |
 |---|---|
 | Application | C# 14, ASP.NET Core 10 Razor Pages + Minimal API |
-| Authentification | ASP.NET Core Identity (cookies, mots de passe hachés PBKDF2) |
-| Base de données | PostgreSQL 17 via Entity Framework Core 10 (Npgsql), migrations |
-| Interface | Bootstrap 5.3 servi localement, icônes SVG en sprite, JavaScript natif (glisser-déposer) |
-| Reverse proxy / HTTPS | Caddy 2 (Let's Encrypt automatique, HTTP/2 et HTTP/3, compression zstd/gzip) |
+| Authentification | ASP.NET Core Identity (cookies, mots de passe hachés) |
+| Base de données | PostgreSQL 17 via Entity Framework Core 10 (Npgsql) |
+| Interface | Bootstrap 5.3 servi localement, police Dela Gothic One auto-hébergée, icônes SVG en sprite |
+| Reverse proxy / HTTPS | Caddy 2 (Let's Encrypt automatique, HTTP/2 et HTTP/3, compression) |
 | Conteneurs | Dockerfile multi-étapes (ReadyToRun, utilisateur non-root), Docker Compose |
 | Cloud | AWS EC2 t3.micro, Amazon Linux 2023, déploiement scripté avec AWS CLI |
 
-**Arborescence**
-
 ```
-TaskFlow/
 ├── Program.cs                  # Démarrage : PostgreSQL, Identity, pages, API, migrations
-├── Models/                     # Project, ProjectMember, TaskItem, AppUser, saisies validées
-├── Persistence/                # DbContext, migrations, règles d'accès, données de démo
+├── Models/Catalog.cs           # Contenu du guide : 8 arcs, 38 tomes, 21 personnages
+├── Models/                     # Lecteur, tomes lus, avis, favoris, types de Nen
+├── Persistence/                # DbContext, migrations, état de lecture (anti-spoiler), démo
+├── Pages/                      # Arcs/, Personnages/, Classeur, Communaute, Nen/, Compte/
 ├── Endpoints/Api.cs            # API JSON + /health
-├── Pages/                      # Razor Pages : Account/, Projects/ (Board, Settings), Tasks/, Search
-├── TagHelpers.cs               # <icon>, <avatar>, <tag-chip>
-├── wwwroot/                    # CSS, JS (board.js : glisser-déposer), Bootstrap local
-├── Dockerfile
-├── docker-compose.yml          # Développement local : app + PostgreSQL
-└── deploy/
-    ├── docker-compose.prod.yml # Production : Caddy + app + PostgreSQL
-    ├── Caddyfile               # HTTPS, en-têtes de sécurité, reverse proxy
-    ├── .env.example            # Variables (domaine, image, mot de passe PostgreSQL)
-    ├── user-data.sh            # Installation automatique au premier démarrage EC2
-    ├── update.sh               # Mise à jour sans perte de données (sur le serveur)
-    ├── aws-deploy.sh           # Création de l'infrastructure AWS en une commande
-    └── aws-destroy.sh          # Suppression de toutes les ressources AWS
+├── Dockerfile, docker-compose.yml
+└── deploy/                     # Compose de production, Caddyfile, scripts EC2 et AWS
 ```
 
 ## 3. Lancer en local
 
-Prérequis : Docker Desktop (le SDK .NET n'est pas nécessaire).
+Prérequis : Docker Desktop.
 
 ```bash
 docker compose up --build
 ```
 
-Ouvrir http://localhost:8081 et se connecter avec `demo@taskflow.local` / `Demo1234`.
-Arrêter avec `docker compose down` (ajouter `-v` pour effacer aussi la base).
+Ouvrir http://localhost:8081 (compte `demo@guide.local` / `Demo1234`).
 
 ## 4. Publier l'image
 
 ```bash
-docker build -t asaph01/taskflow:2.0 .
-docker push asaph01/taskflow:2.0
+docker build -t asaph01/hxh-guide:1.0 .
+docker push asaph01/hxh-guide:1.0
 ```
 
 ## 5. Déployer sur AWS
-
-### En une commande (AWS CLI)
 
 Prérequis : AWS CLI v2 connecté (`aws login`). Depuis Git Bash, à la racine du projet :
 
@@ -115,68 +101,37 @@ Prérequis : AWS CLI v2 connecté (`aws login`). Depuis Git Bash, à la racine d
 ./deploy/aws-deploy.sh
 ```
 
-Le script crée la paire de clés `taskflow-key`, le Security Group `taskflow-sg` (80/443 publics, 22 limité à ton IP),
-lance une instance `t3.micro` Amazon Linux 2023 avec `deploy/user-data.sh`, puis attend que `https://<ip>.sslip.io/health` réponde.
-Il peut être relancé sans risque : il réutilise ce qui existe déjà.
+Le script crée la paire de clés `hxh-key`, le Security Group `hxh-sg` (80/443 publics, 22 limité à ton IP),
+lance une instance `t3.micro` avec `deploy/user-data.sh`, puis attend que `https://<ip>.sslip.io/health` réponde.
+`user-data.sh` installe Docker et Docker Compose, récupère la configuration depuis ce dépôt, génère le fichier `.env`
+(domaine, **mot de passe PostgreSQL aléatoire**) et démarre les conteneurs dans `/opt/hxh-guide`.
 
-`user-data.sh` installe Docker et Docker Compose, télécharge `docker-compose.prod.yml` et `Caddyfile` depuis ce dépôt,
-génère le fichier `.env` (domaine sslip.io, **mot de passe PostgreSQL aléatoire**) et démarre les conteneurs.
-
-**Sans rien installer** : depuis AWS CloudShell (icône `>_` de la console) :
+Vérifier sur le serveur :
 
 ```bash
-git clone https://github.com/asaphfelix03-beep/taskflow.git && cd taskflow && MY_IP=<IP-de-ton-PC> ./deploy/aws-deploy.sh
+ssh -i hxh-key.pem ec2-user@<IP>
+cd /opt/hxh-guide && sudo docker compose ps
 ```
 
-### Vérifier
+Mettre à jour : `docker build` + `docker push` d'un nouveau tag, puis sur le serveur `sudo /opt/hxh-guide/update.sh 1.1`.
 
-```bash
-ssh -i taskflow-key.pem ec2-user@<IP>
-cd /opt/taskflow
-sudo docker compose ps            # caddy, app, db : Up (db healthy)
-sudo docker compose logs -f app   # logs de l'application
-sudo docker compose logs caddy    # obtention du certificat HTTPS
-```
+## 6. Sécurité
 
-## 6. Mettre à jour
+- HTTPS partout, redirection automatique, HSTS et en-têtes de sécurité (Caddyfile)
+- Mots de passe hachés, compte bloqué après 5 échecs, cookies `HttpOnly` et `SameSite`
+- Protection **CSRF** sur tous les formulaires
+- Conteneur applicatif non-root ; PostgreSQL non exposé ; secrets générés sur le serveur, jamais dans Git ; SSH limité à une IP
 
-1. Changer `<Version>` dans `TaskFlow.csproj`, puis `docker build -t asaph01/taskflow:2.1 .` et `docker push`.
-2. Sur le serveur : `sudo /opt/taskflow/update.sh 2.1`
+## 7. Captures d'écran pour le rapport
 
-Les données restent dans le volume `pgdata` ; les nouvelles migrations s'appliquent au démarrage.
-
-## 7. Sécurité
-
-- **HTTPS** partout, redirection automatique, HSTS et en-têtes de sécurité (Caddyfile)
-- Mots de passe **hachés** (Identity), blocage du compte après 5 échecs, cookies `HttpOnly` et `SameSite`
-- Protection **CSRF** sur tous les formulaires et sur le glisser-déposer (jeton anti-falsification)
-- **Contrôle d'accès** centralisé (`Persistence/AccessQueries.cs`) : un utilisateur ne voit que les projets dont il est membre ;
-  les autres projets renvoient 404
-- Conteneur applicatif **non-root** ; PostgreSQL non exposé à Internet ; mot de passe généré sur le serveur, jamais dans Git
-- SSH limité à une seule adresse IP
-
-## 8. Captures d'écran pour le rapport
-
-1. Docker Hub : le dépôt `asaph01/taskflow` avec les tags `1.0` et `2.0`
-2. Console EC2 : l'instance, son IP publique, les règles du Security Group (22, 80, 443)
-3. SSH : `sudo docker compose ps` (3 conteneurs) et `docker images`
-4. Navigateur : le **cadenas HTTPS**, le tableau Kanban, le tableau de bord
+1. Docker Hub : `asaph01/hxh-guide`
+2. Console EC2 : l'instance, son IP, les règles du Security Group
+3. SSH : `sudo docker compose ps` (3 conteneurs)
+4. Navigateur : le cadenas HTTPS, l'accueil, le classeur, une fiche d'arc masquée par le mode sans spoiler
 5. `https://13-48-46-246.sslip.io/health`
 
-## 9. Dépannage
-
-| Problème | Cause probable / solution |
-|---|---|
-| Erreur de certificat HTTPS au premier lancement | Caddy obtient le certificat en ~30 s ; vérifier `docker compose logs caddy` et que le port 80 est ouvert |
-| `/health` renvoie `unhealthy` | PostgreSQL ne répond pas : `docker compose ps db`, `docker compose logs db` |
-| Page blanche / 502 | L'application démarre encore ou a planté : `docker compose logs app` |
-| `permission denied ... docker.sock` | Préfixer avec `sudo`, ou se reconnecter en SSH (groupe docker) |
-| L'IP change après arrêt/redémarrage de l'instance | Le domaine sslip.io change aussi : associer une **Elastic IP** et mettre à jour `DOMAIN` dans `/opt/taskflow/.env` |
-
-## 10. Nettoyage (éviter les frais)
+## 8. Nettoyage
 
 ```bash
 ./deploy/aws-destroy.sh
 ```
-
-Supprime l'instance, le Security Group et la paire de clés.

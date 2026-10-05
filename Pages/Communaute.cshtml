@@ -1,0 +1,79 @@
+@page
+@model CommunauteModel
+@{
+    ViewData["Title"] = "Communauté";
+}
+
+<h1 class="display-title h2 mb-1">La communauté</h1>
+<p class="text-body-secondary mb-4">Ce que pensent les @Model.ReaderCount lecteurs du guide.</p>
+
+<div class="split">
+    <section>
+        <h2 class="h5 mb-3">Les arcs préférés</h2>
+        @if (Model.TopArcs.Count == 0)
+        {
+            <p class="text-body-secondary">Aucun arc n'a encore été noté.</p>
+        }
+        else
+        {
+            <ol class="ranking">
+                @foreach (var (arc, rating) in Model.TopArcs)
+                {
+                    <li class="arc-@arc.Slug">
+                        <span class="place"></span>
+                        <span class="ranking-swatch"></span>
+                        <a class="ranking-name" href="/Arcs/@arc.Slug">@arc.Title</a>
+                        <stars count="@((int)Math.Round(rating.Average))" max="5" class="d-none d-sm-inline-flex" />
+                        <span class="ranking-value"><strong>@rating.Average.ToString("0.0")</strong> <span class="text-body-secondary">(@rating.Count)</span></span>
+                    </li>
+                }
+            </ol>
+        }
+
+        <h2 class="h5 mt-5 mb-3">Derniers avis</h2>
+        <div class="review-list">
+            @foreach (var review in Model.Latest)
+            {
+                var arc = Catalog.ArcBySlug(review.ArcSlug)!;
+                <div>
+                    <p class="small mb-1">Sur <a href="/Arcs/@arc.Slug">@arc.Title</a></p>
+                    @if (Model.State.CanSee(arc) || !Model.State.SignedIn)
+                    {
+                        <partial name="_Review" model="review" />
+                    }
+                    else
+                    {
+                        <details class="spoiler">
+                            <summary><icon name="eye-slash" /> Avis sur un arc que tu n'as pas encore lu. Afficher quand même.</summary>
+                            <div class="mt-2"><partial name="_Review" model="review" /></div>
+                        </details>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+
+    <aside>
+        <h2 class="h5 mb-3">Les personnages les plus aimés</h2>
+        <ol class="ranking">
+            @foreach (var (character, count) in Model.TopCharacters)
+            {
+                var visible = Model.State.CanSee(character) || !Model.State.SignedIn;
+                <li>
+                    <span class="place"></span>
+                    @if (visible)
+                    {
+                        <avatar name="@character.Name" nen="@character.Nen" class="avatar-sm" />
+                        <a class="ranking-name" href="/Personnages/@character.Slug">@character.Name</a>
+                    }
+                    else
+                    {
+                        <span class="avatar avatar-sm nen-none" aria-hidden="true">?</span>
+                        <span class="ranking-name text-body-secondary">Masqué (« @character.FirstArc.Title »)</span>
+                    }
+                    <span class="ranking-value"><icon name="heart-fill" class="is-favorite" /> @count</span>
+                </li>
+            }
+        </ol>
+    </aside>
+</div>

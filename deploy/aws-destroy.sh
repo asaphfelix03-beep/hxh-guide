@@ -4,7 +4,7 @@
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
 
-NAME="taskflow"
+NAME="hxh"
 REGION="$(aws configure get region || true)"
 export AWS_DEFAULT_REGION="${REGION:-us-east-1}"
 
@@ -31,4 +31,4 @@ if aws ec2 describe-key-pairs --key-names "$NAME-key" >/dev/null 2>&1; then
   aws ec2 delete-key-pair --key-name "$NAME-key"
 fi
 
-echo "==> Terminé : plus aucune ressource TaskFlow sur AWS."
+echo "==> Terminé : plus aucune ressource du Guide H×H sur AWS."

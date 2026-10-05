@@ -4,9 +4,9 @@
     ViewData["Title"] = Model.Text.Title;
 }
 
-<div class="text-center py-5">
-    <icon name="exclamation-triangle" class="display-4 text-warning" />
-    <h1 class="h3 mt-3">@Model.Text.Title</h1>
+<div class="error-page">
+    <partial name="_NenGlass" model="(NenType?)null" />
+    <h1 class="display-title h2 mt-3">@Model.Text.Title</h1>
     <p class="text-body-secondary">@Model.Text.Message</p>
     <a class="btn btn-primary" href="/">Retour à l'accueil</a>
 </div>

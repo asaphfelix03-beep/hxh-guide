@@ -1,0 +1,58 @@
+@page
+@model HxhGuide.Pages.Nen.IndexModel
+@{
+    ViewData["Title"] = "Le Nen";
+}
+
+<section class="nen-intro">
+    <div>
+        <h1 class="display-title h1">Le Nen</h1>
+        <p class="lead">
+            L'art de contrôler son aura, introduit dans l'arc de la Tour céleste. Chaque personne a une affinité naturelle
+            avec l'un des six types, disposés en hexagone : plus deux types sont éloignés, plus il est difficile de maîtriser l'autre.
+        </p>
+        <p class="text-body-secondary">
+            Exemple : un spécialiste du Renforcement maîtrise son type à 100 %, la Transformation et l'Émission (ses voisins)
+            à 80 %, et la Spécialisation (à l'opposé) à seulement 40 %.
+        </p>
+    </div>
+    <partial name="_NenHexagon" model="NenType.Renforcement" />
+</section>
+
+<section class="nen-water">
+    <figure class="nen-result-glass">
+        <partial name="_NenGlass" model="(NenType?)null" />
+    </figure>
+    <div>
+        <h2 class="h4">La divination par l'eau</h2>
+        <p>
+            Pour connaître son type, on pose une feuille sur un verre rempli d'eau, puis on concentre son aura autour du verre.
+            La réaction de l'eau ou de la feuille révèle le type : l'eau déborde, change de goût, de couleur, des impuretés apparaissent,
+            la feuille bouge… ou quelque chose d'unique se produit.
+        </p>
+    </div>
+</section>
+
+<section class="nen-guide" aria-labelledby="guide-title">
+    <h2 id="guide-title" class="h4 mb-3">Les six types</h2>
+    <div class="nen-guide-grid">
+        @foreach (var info in NenTypes.All)
+        {
+            var characters = Model.CharactersOf(info.Type).ToList();
+            <article class="nen-type nen-@info.Slug">
+                <h3 class="h6">@info.Name</h3>
+                <p>@info.Power</p>
+                <p class="small"><icon name="droplet" /> @info.WaterSign</p>
+                @if (characters.Count > 0)
+                {
+                    <p class="small mb-0">
+                        @for (var i = 0; i < characters.Count; i++)
+                        {
+                            <a href="/Personnages/@characters[i].Slug">@characters[i].Name</a>@(i < characters.Count - 1 ? ", " : "")
+                        }
+                    </p>
+                }
+            </article>
+        }
+    </div>
+</section>

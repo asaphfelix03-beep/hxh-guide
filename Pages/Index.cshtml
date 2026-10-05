@@ -1,147 +1,122 @@
 @page
 @model IndexModel
 @{
-    ViewData["Title"] = User.Identity?.IsAuthenticated == true ? "Tableau de bord" : "Accueil";
+    ViewData["Title"] = Model.State.SignedIn ? "Ma lecture" : "Le guide du manga";
+    var state = Model.State;
+    var best = Model.Ratings.Values.Where(r => r.Count > 0).OrderByDescending(r => r.Average).ThenByDescending(r => r.Count).FirstOrDefault();
 }
 
-@if (User.Identity?.IsAuthenticated != true)
+@if (!state.SignedIn)
 {
-    <section class="hero text-center py-5">
-        <span class="brand-mark brand-mark-lg mb-3"><icon name="check2-square" /></span>
-        <h1 class="display-6 fw-bold mb-3">Les projets de votre équipe, au même endroit.</h1>
-        <p class="lead text-body-secondary mx-auto mb-4" style="max-width: 36rem">
-            Tableaux Kanban partagés, tâches assignées, échéances et étiquettes.
-            Simple, rapide, et hébergé sur AWS dans des conteneurs Docker.
-        </p>
-        <div class="d-flex justify-content-center gap-2 flex-wrap">
-            <a class="btn btn-primary btn-lg" href="/Account/Register">Créer un compte</a>
-            <a class="btn btn-outline-secondary btn-lg" href="/Account/Login">Se connecter</a>
+    <section class="hero">
+        <div class="hero-text">
+            <h1 class="display-title">Hunter × Hunter, tome après tome.</h1>
+            <p class="lead">
+                Le guide des huit arcs du manga, de ses personnages et du Nen. Coche les tomes que tu as lus :
+                tout ce qui vient après reste masqué, pour lire sans te faire spoiler.
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-primary btn-lg" href="/Compte/Inscription">Commencer mon classeur</a>
+                <a class="btn btn-outline-secondary btn-lg" href="/Arcs">Parcourir les arcs</a>
+            </div>
+            @if (Model.DemoEnabled)
+            {
+                <p class="demo-hint mt-4 mb-0">
+                    Envie d'essayer d'abord ? Compte de démonstration :
+                    <code>@SeedData.DemoEmail</code> / <code>@SeedData.DemoPassword</code>
+                </p>
+            }
         </div>
-        @if (Model.DemoEnabled)
+        <div class="hero-binder" aria-hidden="true">
+            @for (var n = 1; n <= 12; n++)
+            {
+                var arc = Catalog.MainArcOfVolume(n);
+                <span class="slot arc-@arc.Slug @(n <= 7 ? "is-read" : "")"><span class="slot-number">@n</span></span>
+            }
+        </div>
+    </section>
+
+    <section class="mt-5">
+        <h2 class="h4 mb-3">Les huit arcs</h2>
+        <partial name="_ArcTimeline" model="state" />
+        @if (best is not null && Catalog.ArcBySlug(best.ArcSlug) is { } bestArc)
         {
-            <p class="small text-body-secondary mt-3 mb-0">
-                Démo : <code>@SeedData.DemoEmail</code> / <code>@SeedData.DemoPassword</code>
+            <p class="text-body-secondary mt-3 mb-0">
+                L'arc préféré des lecteurs : <a href="/Arcs/@bestArc.Slug">@bestArc.Title</a>,
+                noté @best.Average.ToString("0.0") sur 5 (@best.Count avis).
             </p>
         }
     </section>
-
-    <section class="row g-3 mt-2">
-        <div class="col-md-4">
-            <div class="feature card h-100"><div class="card-body">
-                <icon name="kanban" class="feature-icon" />
-                <h2 class="h6 mt-2">Tableau Kanban</h2>
-                <p class="small text-body-secondary mb-0">Glissez-déposez vos tâches de « À faire » à « Terminé ».</p>
-            </div></div>
-        </div>
-        <div class="col-md-4">
-            <div class="feature card h-100"><div class="card-body">
-                <icon name="people" class="feature-icon" />
-                <h2 class="h6 mt-2">Travail en équipe</h2>
-                <p class="small text-body-secondary mb-0">Invitez des membres, assignez les tâches, suivez qui fait quoi.</p>
-            </div></div>
-        </div>
-        <div class="col-md-4">
-            <div class="feature card h-100"><div class="card-body">
-                <icon name="clock" class="feature-icon" />
-                <h2 class="h6 mt-2">Échéances et priorités</h2>
-                <p class="small text-body-secondary mb-0">Votre tableau de bord montre ce qui est en retard ou urgent.</p>
-            </div></div>
-        </div>
-    </section>
+    @if (Model.ReaderCount > 0)
+    {
+        <p class="text-body-secondary small mt-4">@Model.ReaderCount lecteurs suivent déjà leur lecture ici.</p>
+    }
     return;
 }
 
-<div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-4">
-    <div>
-        <h1 class="h3 mb-0">Bonjour, @Model.DisplayName</h1>
-        <p class="text-body-secondary mb-0">@Model.Today.ToString("dddd d MMMM yyyy")</p>
-    </div>
-    <a class="btn btn-primary" href="/Projects#nouveau"><icon name="plus-lg" /> Nouveau projet</a>
-</div>
-
-<div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
-        <div class="stat card h-100"><div class="card-body">
-            <div class="stat-label">Mes tâches ouvertes</div>
-            <div class="stat-value">@Model.OpenCount</div>
-        </div></div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat card h-100 @(Model.OverdueCount > 0 ? "stat-danger" : "")"><div class="card-body">
-            <div class="stat-label">En retard</div>
-            <div class="stat-value">@Model.OverdueCount</div>
-        </div></div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat card h-100"><div class="card-body">
-            <div class="stat-label">À rendre sous 7 jours</div>
-            <div class="stat-value">@Model.DueSoonCount</div>
-        </div></div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat card h-100 stat-success"><div class="card-body">
-            <div class="stat-label">Terminées cette semaine</div>
-            <div class="stat-value">@Model.DoneThisWeekCount</div>
-        </div></div>
-    </div>
-</div>
-
-<div class="row g-4">
-    <div class="col-lg-7">
-        <h2 class="h5 mb-3">Mes tâches</h2>
-        @if (Model.MyTasks.Count == 0)
+<div class="dashboard">
+    <section>
+        <h1 class="display-title h2 mb-1">Bonjour, @User.DisplayName()</h1>
+        @if (state.NextVolume is { } next && state.CurrentArc is { } current)
         {
-            <div class="empty-state">
-                <icon name="check-circle-fill" class="text-success" />
-                <p class="mb-0">Aucune tâche ouverte ne vous est assignée.</p>
-            </div>
+            <p class="lead mb-4">Prochain tome à lire : <strong>tome @next</strong>, dans « <a href="/Arcs/@current.Slug">@current.Title</a> ».</p>
         }
         else
         {
-            <div class="list-group shadow-sm">
-                @foreach (var task in Model.MyTasks)
-                {
-                    <a class="list-group-item list-group-item-action d-flex gap-3 align-items-center py-3" href="/Tasks/Edit/@task.Id">
-                        <span class="state-dot state-@task.State.ToString().ToLowerInvariant()" title="@task.State.Label()"></span>
-                        <span class="flex-grow-1 min-w-0">
-                            <span class="d-block fw-semibold text-truncate">@task.Title</span>
-                            <span class="small text-body-secondary">@task.Project.Name · @task.State.Label()</span>
-                        </span>
-                        @if (task.Priority == Priority.High)
-                        {
-                            <span class="priority priority-high" title="Priorité haute"><icon name="flag-fill" /></span>
-                        }
-                        @if (task.DueDate is { } due)
-                        {
-                            <span class="due small @(task.IsOverdue(Model.Today) ? "due-late" : "")"><icon name="calendar-event" /> @due.ToString("d MMM")</span>
-                        }
-                    </a>
-                }
-            </div>
+            <p class="lead mb-4">Tu as lu les @Catalog.TotalVolumes tomes parus. Il ne reste plus qu'à attendre le prochain.</p>
         }
-    </div>
 
-    <div class="col-lg-5">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <h2 class="h5 mb-0">Mes projets</h2>
-            <a class="small" href="/Projects">Tout voir</a>
+        <div class="progress-block">
+            <div class="d-flex justify-content-between align-items-baseline">
+                <span class="big-number">@state.ReadCount<small>/@Catalog.TotalVolumes</small></span>
+                <span class="text-body-secondary">@state.Percent % du manga lu</span>
+            </div>
+            <div class="meter meter-lg" role="progressbar" aria-label="Tomes lus" aria-valuenow="@state.Percent" aria-valuemin="0" aria-valuemax="100">
+                <span style="width: @state.Percent%"></span>
+            </div>
         </div>
-        @if (Model.Projects.Count == 0)
+
+        <h2 class="h5 mt-4 mb-3">Ma progression par arc</h2>
+        <partial name="_ArcTimeline" model="state" />
+
+        <div class="d-flex align-items-center justify-content-between mt-5 mb-3">
+            <h2 class="h5 mb-0">Mon classeur</h2>
+            <a class="btn btn-sm btn-outline-secondary" href="/Classeur">Mettre à jour</a>
+        </div>
+        <partial name="_Binder" model="new BinderModel(state, Interactive: false, Compact: true)" />
+    </section>
+
+    <aside>
+        <h2 class="h5 mb-3">Mes personnages favoris</h2>
+        @if (Model.Favorites.Count == 0)
         {
             <div class="empty-state">
-                <icon name="kanban" />
-                <p class="mb-2">Vous n'avez pas encore de projet.</p>
-                <a class="btn btn-sm btn-primary" href="/Projects#nouveau">Créer un projet</a>
+                <icon name="heart" />
+                <p class="mb-2">Aucun favori pour l'instant.</p>
+                <a class="btn btn-sm btn-outline-secondary" href="/Personnages">Voir les personnages</a>
             </div>
         }
         else
         {
-            <div class="d-grid gap-3">
-                @foreach (var project in Model.Projects)
+            <ul class="favorite-list">
+                @foreach (var character in Model.Favorites)
                 {
-                    <partial name="_ProjectCard" model="project" />
+                    <li>
+                        <a href="/Personnages/@character.Slug">
+                            <avatar name="@character.Name" nen="@character.Nen" />
+                            <span class="min-w-0">
+                                <span class="d-block fw-semibold text-truncate">@character.Name</span>
+                                <span class="small text-body-secondary">@character.Affiliation</span>
+                            </span>
+                        </a>
+                    </li>
                 }
-            </div>
+            </ul>
         }
-    </div>
+
+        @if (state.HideSpoilers)
+        {
+            <p class="spoiler-note"><icon name="eye-slash" /> Mode sans spoiler activé : le contenu des arcs après le tome @state.MaxRead est masqué.</p>
+        }
+    </aside>
 </div>

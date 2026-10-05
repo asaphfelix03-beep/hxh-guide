@@ -1,0 +1,47 @@
+@page
+@model HxhGuide.Pages.Arcs.IndexModel
+@{
+    ViewData["Title"] = "Les arcs";
+}
+
+<h1 class="display-title h2 mb-1">Les huit arcs</h1>
+<p class="text-body-secondary mb-4">
+    @Catalog.TotalVolumes tomes parus. Un tome peut contenir la fin d'un arc et le début du suivant :
+    les numéros de chapitres sont donnés à titre indicatif.
+</p>
+
+<partial name="_ArcTimeline" model="Model.State" />
+
+<ol class="arc-list mt-4">
+    @foreach (var arc in Catalog.Arcs)
+    {
+        var rating = Model.Ratings.GetValueOrDefault(arc.Slug);
+        <li class="arc-row arc-@arc.Slug">
+            <span class="arc-order">@arc.Order</span>
+            <div class="min-w-0">
+                <h2 class="arc-title"><a href="/Arcs/@arc.Slug" class="stretched-link">@arc.Title</a></h2>
+                <p class="arc-meta">@arc.Volumes, @arc.Chapters.ToLowerInvariant()@(arc.Ongoing ? ", en cours de parution" : "")</p>
+            </div>
+            <span class="arc-rating">
+                @if (rating is not null)
+                {
+                    <stars count="@((int)Math.Round(rating.Average))" max="5" />
+                    <span class="small text-body-secondary">@rating.Average.ToString("0.0") (@rating.Count)</span>
+                }
+                else
+                {
+                    <span class="small text-body-secondary">Pas encore d'avis</span>
+                }
+            </span>
+            @if (Model.State.SignedIn)
+            {
+                <span class="arc-progress">
+                    <span class="meter" role="progressbar" aria-label="Tomes lus dans cet arc" aria-valuenow="@Model.State.ArcPercent(arc)" aria-valuemin="0" aria-valuemax="100">
+                        <span style="width: @Model.State.ArcPercent(arc)%"></span>
+                    </span>
+                    <span class="small text-body-secondary text-nowrap">@Model.State.ArcRead(arc)/@arc.VolumeCount</span>
+                </span>
+            }
+        </li>
+    }
+</ol>

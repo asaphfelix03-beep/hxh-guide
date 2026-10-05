@@ -1,0 +1,47 @@
+@model NenType?
+@{
+    // Hexagone du Nen : un sommet par type, dans le sens horaire en partant du haut.
+    const double cx = 210, cy = 150, r = 98, labelR = 120;
+    (double X, double Y) Point(int i, double radius)
+    {
+        var angle = Math.PI / 180 * (-90 + 60 * i);
+        return (cx + radius * Math.Cos(angle), cy + radius * Math.Sin(angle));
+    }
+    string F(double v) => v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+    var outline = string.Join(" ", Enumerable.Range(0, 6).Select(i => { var p = Point(i, r); return $"{F(p.X)},{F(p.Y)}"; }));
+    // Polygone des affinités : chaque sommet est placé selon le pourcentage de maîtrise.
+    var affinity = Model is { } own
+        ? string.Join(" ", NenTypes.All.Select((info, i) => { var p = Point(i, r * own.Affinity(info.Type) / 100.0); return $"{F(p.X)},{F(p.Y)}"; }))
+        : null;
+}
+
+<svg class="nen-hexagon" viewBox="0 0 420 300" role="img"
+     aria-label="@(Model is { } t ? $"Hexagone du Nen : affinités du type {t.Info().Name}" : "Hexagone des six types de Nen")">
+    <polygon class="hex-outline" points="@outline" />
+    @for (var ring = 1; ring <= 3; ring++)
+    {
+        var inner = string.Join(" ", Enumerable.Range(0, 6).Select(i => { var p = Point(i, r * (1 - ring * 0.2)); return $"{F(p.X)},{F(p.Y)}"; }));
+        <polygon class="hex-ring" points="@inner" />
+    }
+    @if (affinity is not null)
+    {
+        <polygon class="hex-affinity" points="@affinity" />
+    }
+    @foreach (var (info, i) in NenTypes.All.Select((info, i) => (info, i)))
+    {
+        var vertex = Point(i, r);
+        var label = Point(i, labelR);
+        var anchor = i is 0 or 3 ? "middle" : i is 1 or 2 ? "start" : "end";
+        var dy = i == 0 ? -4 : i == 3 ? 14 : 5;
+        var isOwn = Model == info.Type;
+        <circle class="hex-dot nen-@info.Slug" cx="@F(vertex.X)" cy="@F(vertex.Y)" r="@(isOwn ? 9 : 6)" />
+        @* Balise SVG <text> écrite via Html.Raw : dans un bloc de code, Razor réserve le mot « text ». *@
+        @Html.Raw($"<text class=\"hex-label{(isOwn ? " is-own" : "")}\" x=\"{F(label.X)}\" y=\"{F(label.Y + dy)}\" text-anchor=\"{anchor}\">")
+        @info.Name
+        @if (Model is { } mine)
+        {
+            <tspan class="hex-percent" dx="6">@mine.Affinity(info.Type) %</tspan>
+        }
+        @Html.Raw("</text>")
+    }
+</svg>

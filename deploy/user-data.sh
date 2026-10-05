@@ -4,8 +4,8 @@
 # (Caddy HTTPS, application, PostgreSQL). Log : /var/log/cloud-init-output.log
 set -euxo pipefail
 
-REPO_RAW="https://raw.githubusercontent.com/asaphfelix03-beep/taskflow/main/deploy"
-APP_DIR=/opt/taskflow
+REPO_RAW="https://raw.githubusercontent.com/asaphfelix03-beep/hxh-guide/main/deploy"
+APP_DIR=/opt/hxh-guide
 
 dnf install -y docker
 systemctl enable --now docker
@@ -32,7 +32,7 @@ PUBLIC_IP=$(curl -fsS -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.2
 if [ ! -f .env ]; then
   cat > .env <<EOF
 DOMAIN=${PUBLIC_IP//./-}.sslip.io
-IMAGE=asaph01/taskflow:2.0
+IMAGE=asaph01/hxh-guide:1.0
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
 SEED_DEMO=true
 EOF

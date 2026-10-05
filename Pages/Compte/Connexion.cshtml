@@ -1,0 +1,43 @@
+@page
+@model HxhGuide.Pages.Compte.ConnexionModel
+@{
+    ViewData["Title"] = "Connexion";
+}
+
+<div class="auth-panel">
+    <partial name="_BrandMark" />
+    <h1 class="h3 mt-3 mb-1">Connexion</h1>
+    <p class="text-body-secondary mb-4">Retrouve ton classeur et ta progression de lecture.</p>
+
+    <form method="post" novalidate>
+        <input type="hidden" name="retour" value="@Model.ReturnUrl" />
+        <div asp-validation-summary="ModelOnly" class="flash flash-error small"></div>
+
+        <div class="mb-3">
+            <label asp-for="Input.Email" class="form-label"></label>
+            <input asp-for="Input.Email" class="form-control" autocomplete="email" autofocus />
+            <span asp-validation-for="Input.Email" class="text-danger small"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Input.Password" class="form-label"></label>
+            <input asp-for="Input.Password" class="form-control" autocomplete="current-password" />
+            <span asp-validation-for="Input.Password" class="text-danger small"></span>
+        </div>
+        <div class="form-check mb-4">
+            <input asp-for="Input.RememberMe" class="form-check-input" />
+            <label asp-for="Input.RememberMe" class="form-check-label"></label>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100"><icon name="box-arrow-in-right" /> Se connecter</button>
+    </form>
+
+    <p class="small text-center mt-3 mb-0">Pas encore de compte ? <a href="/Compte/Inscription">Créer un compte</a></p>
+
+    @if (Model.DemoEnabled)
+    {
+        <p class="demo-hint mt-4 mb-0">
+            Compte de démonstration :<br />
+            <code>@SeedData.DemoEmail</code> / <code>@SeedData.DemoPassword</code>
+        </p>
+    }
+</div>

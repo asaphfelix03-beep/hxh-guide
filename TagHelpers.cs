@@ -1,10 +1,10 @@
 using System.Text.Encodings.Web;
+using HxhGuide.Models;
 using Microsoft.AspNetCore.Razor.TagHelpers;
-using TaskFlow.Models;
 
-namespace TaskFlow;
+namespace HxhGuide;
 
-/// <summary>&lt;icon name="trash" /&gt; → icône SVG du sprite (Pages/Shared/_IconSprite.cshtml).</summary>
+/// <summary>&lt;icon name="trophy" /&gt; → icône SVG du sprite (Pages/Shared/_IconSprite.cshtml).</summary>
 [HtmlTargetElement("icon", TagStructure = TagStructure.WithoutEndTag)]
 public class IconTagHelper : TagHelper
 {
@@ -21,25 +21,73 @@ public class IconTagHelper : TagHelper
     }
 }
 
-/// <summary>&lt;avatar user-id="..." name="Camille Martin" /&gt; → pastille colorée avec les initiales.</summary>
+/// <summary>&lt;avatar name="Killua Zoldyck" nen="Transformation" /&gt; → initiales sur la couleur du Nen.</summary>
 [HtmlTargetElement("avatar", TagStructure = TagStructure.WithoutEndTag)]
 public class AvatarTagHelper : TagHelper
 {
-    public string UserId { get; set; } = "";
     public string Name { get; set; } = "";
+    public NenType? Nen { get; set; }
 
     public override void Process(TagHelperContext context, TagHelperOutput output)
     {
         output.TagName = "span";
         output.TagMode = TagMode.StartTagAndEndTag;
         var extra = output.Attributes["class"]?.Value?.ToString();
-        output.Attributes.SetAttribute("class", $"avatar tone-{UserDisplay.Tone(UserId)} {extra}".Trim());
-        output.Attributes.SetAttribute("title", Name);
-        output.Content.SetContent(UserDisplay.Initials(Name));
+        var nen = Nen is { } type ? $"nen-{type.Info().Slug}" : "nen-none";
+        output.Attributes.SetAttribute("class", $"avatar {nen} {extra}".Trim());
+        output.Attributes.SetAttribute("title", Nen is { } t ? $"{Name} ({t.Info().Name})" : Name);
+        output.Content.SetContent(Initials.Of(Name));
     }
 }
 
-/// <summary>&lt;tag-chip value="docker" /&gt; → étiquette colorée.</summary>
+/// <summary>&lt;nen-chip type="..." /&gt; → pastille colorée avec le nom du type de Nen.</summary>
+[HtmlTargetElement("nen-chip", TagStructure = TagStructure.WithoutEndTag)]
+public class NenChipTagHelper : TagHelper
+{
+    public NenType? Type { get; set; }
+
+    public override void Process(TagHelperContext context, TagHelperOutput output)
+    {
+        output.TagName = "span";
+        output.TagMode = TagMode.StartTagAndEndTag;
+        var extra = output.Attributes["class"]?.Value?.ToString();
+        if (Type is { } type)
+        {
+            output.Attributes.SetAttribute("class", $"nen-chip nen-{type.Info().Slug} {extra}".Trim());
+            output.Content.SetContent(type.Info().Name);
+        }
+        else
+        {
+            output.Attributes.SetAttribute("class", $"nen-chip nen-none {extra}".Trim());
+            output.Content.SetContent("Nen non précisé");
+        }
+    }
+}
+
+/// <summary>&lt;stars count="2" /&gt; → étoiles dorées (difficulté ou rang).</summary>
+[HtmlTargetElement("stars", TagStructure = TagStructure.WithoutEndTag)]
+public class StarsTagHelper : TagHelper
+{
+    public int Count { get; set; }
+    public int Max { get; set; } = 3;
+
+    public override void Process(TagHelperContext context, TagHelperOutput output)
+    {
+        output.TagName = "span";
+        output.TagMode = TagMode.StartTagAndEndTag;
+        var extra = output.Attributes["class"]?.Value?.ToString();
+        output.Attributes.SetAttribute("class", $"stars {extra}".Trim());
+        output.Attributes.SetAttribute("role", "img");
+        output.Attributes.SetAttribute("aria-label", Count switch { 0 => "Aucune étoile", 1 => "1 étoile", _ => $"{Count} étoiles" });
+        var html = string.Concat(Enumerable.Range(1, Max).Select(i =>
+            i <= Count
+                ? "<svg class=\"bi star-on\" aria-hidden=\"true\"><use href=\"#i-star-fill\"></use></svg>"
+                : "<svg class=\"bi star-off\" aria-hidden=\"true\"><use href=\"#i-star\"></use></svg>"));
+        output.Content.SetHtmlContent(html);
+    }
+}
+
+/// <summary>&lt;tag-chip value="capture" /&gt; → catégorie de mission.</summary>
 [HtmlTargetElement("tag-chip", TagStructure = TagStructure.WithoutEndTag)]
 public class TagChipTagHelper : TagHelper
 {
@@ -49,7 +97,7 @@ public class TagChipTagHelper : TagHelper
     {
         output.TagName = "span";
         output.TagMode = TagMode.StartTagAndEndTag;
-        output.Attributes.SetAttribute("class", $"tag-chip tone-{UserDisplay.Tone(Value)}");
+        output.Attributes.SetAttribute("class", "tag-chip");
         output.Content.SetContent($"#{Value}");
     }
 }

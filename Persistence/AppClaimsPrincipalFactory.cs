@@ -1,23 +1,29 @@
 using System.Security.Claims;
+using HxhGuide.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using TaskFlow.Models;
 
-namespace TaskFlow.Persistence;
+namespace HxhGuide.Persistence;
 
-/// <summary>Ajoute le nom affiché au cookie de session pour l'afficher sans requête en base.</summary>
+/// <summary>Ajoute le nom affiché au cookie de session : affiché partout sans requête en base.</summary>
 public class AppClaimsPrincipalFactory(
-    UserManager<AppUser> userManager,
+    UserManager<Reader> userManager,
     RoleManager<IdentityRole> roleManager,
     IOptions<IdentityOptions> options)
-    : UserClaimsPrincipalFactory<AppUser, IdentityRole>(userManager, roleManager, options)
+    : UserClaimsPrincipalFactory<Reader, IdentityRole>(userManager, roleManager, options)
 {
     public const string DisplayNameClaim = "display_name";
 
-    protected override async Task<ClaimsIdentity> GenerateClaimsAsync(AppUser user)
+    protected override async Task<ClaimsIdentity> GenerateClaimsAsync(Reader user)
     {
         var identity = await base.GenerateClaimsAsync(user);
         identity.AddClaim(new Claim(DisplayNameClaim, user.DisplayName));
         return identity;
     }
+}
+
+public static class ReaderClaims
+{
+    public static string DisplayName(this ClaimsPrincipal user) =>
+        user.FindFirstValue(AppClaimsPrincipalFactory.DisplayNameClaim) ?? user.Identity?.Name ?? "";
 }

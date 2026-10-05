@@ -1,46 +1,48 @@
+using HxhGuide.Models;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using TaskFlow.Models;
 
-namespace TaskFlow.Persistence;
+namespace HxhGuide.Persistence;
 
+/// <summary>
+/// Seules les données des lecteurs sont en base (tomes lus, avis, favoris).
+/// Le contenu du manga (arcs, personnages) est dans <see cref="Catalog"/>.
+/// </summary>
 public class AppDbContext(DbContextOptions<AppDbContext> options)
-    : IdentityDbContext<AppUser>(options), IDataProtectionKeyContext
+    : IdentityDbContext<Reader>(options), IDataProtectionKeyContext
 {
-    public DbSet<Project> Projects => Set<Project>();
-    public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
-    public DbSet<TaskItem> Tasks => Set<TaskItem>();
+    public DbSet<ReadVolume> ReadVolumes => Set<ReadVolume>();
+    public DbSet<ArcReview> ArcReviews => Set<ArcReview>();
+    public DbSet<FavoriteCharacter> FavoriteCharacters => Set<FavoriteCharacter>();
 
-    // Clés de chiffrement des cookies stockées en base : les sessions survivent au remplacement du conteneur.
+    // Clés de chiffrement des cookies stockées en base : les sessions survivent aux mises à jour.
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
 
-        builder.Entity<AppUser>(user =>
+        builder.Entity<Reader>().Property(r => r.DisplayName).HasMaxLength(60);
+
+        builder.Entity<ReadVolume>(volume =>
         {
-            user.Property(u => u.DisplayName).HasMaxLength(60);
-            user.Ignore(u => u.Initials);
+            volume.HasKey(v => new { v.UserId, v.Number });
+            volume.HasOne(v => v.User).WithMany().HasForeignKey(v => v.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        builder.Entity<ProjectMember>(member =>
+        builder.Entity<ArcReview>(review =>
         {
-            member.HasKey(m => new { m.ProjectId, m.UserId });
-            member.HasOne(m => m.Project).WithMany(p => p.Members).OnDelete(DeleteBehavior.Cascade);
-            member.HasOne(m => m.User).WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Cascade);
+            review.HasIndex(r => new { r.UserId, r.ArcSlug }).IsUnique();
+            review.HasIndex(r => r.ArcSlug);
+            review.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        builder.Entity<TaskItem>(task =>
+        builder.Entity<FavoriteCharacter>(favorite =>
         {
-            task.ToTable("Tasks");
-            task.HasOne(t => t.Project).WithMany(p => p.Tasks).OnDelete(DeleteBehavior.Cascade);
-            task.HasOne(t => t.Assignee).WithMany().HasForeignKey(t => t.AssigneeId).OnDelete(DeleteBehavior.SetNull);
-            task.HasOne(t => t.CreatedBy).WithMany().HasForeignKey(t => t.CreatedById).OnDelete(DeleteBehavior.SetNull);
-            task.HasIndex(t => new { t.ProjectId, t.State, t.Position });
-            task.HasIndex(t => t.AssigneeId);
-            task.Ignore(t => t.TagList);
+            favorite.HasKey(f => new { f.UserId, f.CharacterSlug });
+            favorite.HasIndex(f => f.CharacterSlug);
+            favorite.HasOne(f => f.User).WithMany().HasForeignKey(f => f.UserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

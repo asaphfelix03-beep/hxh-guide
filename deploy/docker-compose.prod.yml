@@ -1,6 +1,8 @@
 # Production sur EC2 : 3 conteneurs sur un réseau privé Docker.
 #   caddy (ports 80/443, HTTPS automatique)  ->  app (8080, non exposé)  ->  db (5432, non exposé)
 # Variables dans le fichier .env voisin (voir .env.example).
+name: hxh-guide
+
 services:
   caddy:
     image: caddy:2-alpine
@@ -19,10 +21,10 @@ services:
       - app
 
   app:
-    image: ${IMAGE:-asaph01/taskflow:2.0}
+    image: ${IMAGE:-asaph01/hxh-guide:1.0}
     restart: unless-stopped
     environment:
-      ConnectionStrings__Default: "Host=db;Database=taskflow;Username=taskflow;Password=${POSTGRES_PASSWORD}"
+      ConnectionStrings__Default: "Host=db;Database=guide;Username=guide;Password=${POSTGRES_PASSWORD}"
       Seed__Demo: ${SEED_DEMO:-true}
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"   # l'app sait que la requête d'origine était en HTTPS
     depends_on:
@@ -33,13 +35,13 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: taskflow
-      POSTGRES_USER: taskflow
+      POSTGRES_DB: guide
+      POSTGRES_USER: guide
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U taskflow -d taskflow"]
+      test: ["CMD-SHELL", "pg_isready -U guide -d guide"]
       interval: 5s
       timeout: 3s
       retries: 10

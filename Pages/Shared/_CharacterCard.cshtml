@@ -1,0 +1,32 @@
+@model HxhGuide.Pages.CharacterCardModel
+@{
+    var c = Model.Character;
+}
+
+@if (Model.Visible)
+{
+    <article class="character-card">
+        <avatar name="@c.Name" nen="@c.Nen" class="avatar-lg" />
+        <div class="min-w-0">
+            <h3 class="character-name"><a href="/Personnages/@c.Slug" class="stretched-link">@c.Name</a></h3>
+            <p class="character-affiliation">@c.Affiliation</p>
+            <nen-chip type="@c.Nen" />
+        </div>
+        <span class="favorite-count" title="@Model.FavoriteCount lecteur(s) l'ont en favori">
+            <icon name="@(Model.IsFavorite ? "heart-fill" : "heart")" class="@(Model.IsFavorite ? "is-favorite" : "")" /> @Model.FavoriteCount
+        </span>
+    </article>
+}
+else
+{
+    <details class="character-card is-hidden">
+        <summary>
+            <span class="avatar avatar-lg nen-none" aria-hidden="true">?</span>
+            <span class="min-w-0">
+                <span class="character-name">Personnage masqué</span>
+                <span class="character-affiliation">Apparaît dans « @c.FirstArc.Title ». Afficher quand même.</span>
+            </span>
+        </summary>
+        <p class="mt-2 mb-0"><a href="/Personnages/@c.Slug">@c.Name</a>, @c.Affiliation.ToLowerInvariant().</p>
+    </details>
+}

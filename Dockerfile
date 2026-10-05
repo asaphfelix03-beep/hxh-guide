@@ -5,7 +5,7 @@ WORKDIR /src
 # On copie d'abord le .csproj seul : tant qu'il ne change pas,
 # Docker réutilise le cache du "restore" (téléchargement des paquets NuGet).
 # ReadyToRun : code précompilé pour Linux x64 (instance t3.micro), démarrage plus rapide du conteneur.
-COPY TaskFlow.csproj .
+COPY HxhGuide.csproj .
 RUN dotnet restore -r linux-x64 -p:PublishReadyToRun=true
 
 COPY . .
@@ -22,4 +22,4 @@ USER $APP_UID
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "TaskFlow.dll"]
+ENTRYPOINT ["dotnet", "HxhGuide.dll"]

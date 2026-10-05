@@ -1,0 +1,67 @@
+@page
+@model ClasseurModel
+@{
+    ViewData["Title"] = "Mon classeur";
+    var state = Model.State;
+}
+
+<div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-2">
+    <div>
+        <h1 class="display-title h2 mb-1">Mon classeur</h1>
+        <p class="text-body-secondary mb-0">Un emplacement par tome. Clique sur un tome pour le marquer comme lu, ou pour annuler.</p>
+    </div>
+    <div class="text-end">
+        <span class="big-number">@state.ReadCount<small>/@Catalog.TotalVolumes</small></span>
+        <div class="small text-body-secondary">tomes lus</div>
+    </div>
+</div>
+
+@* Les emplacements du classeur soumettent ce formulaire (attribut form="binder-form"). *@
+<form id="binder-form" method="post" asp-page-handler="Toggle"></form>
+<partial name="_Binder" model="new BinderModel(state, Interactive: true)" />
+
+<div class="binder-legend" aria-label="Légende des couleurs">
+    @foreach (var arc in Catalog.Arcs)
+    {
+        <a class="legend-item arc-@arc.Slug" href="/Arcs/@arc.Slug">
+            <span class="legend-swatch"></span>@arc.Title
+            <span class="text-body-secondary">@state.ArcRead(arc)/@arc.VolumeCount</span>
+        </a>
+    }
+</div>
+
+<div class="split mt-5">
+    <section class="panel">
+        <h2 class="h5 mb-2">J'ai tout lu jusqu'au…</h2>
+        <p class="small text-body-secondary">Plus rapide que de cliquer tome par tome : les tomes suivants seront décochés.</p>
+        <form method="post" asp-page-handler="UpTo" class="d-flex gap-2">
+            <label for="jusqua" class="visually-hidden">Dernier tome lu</label>
+            <select id="jusqua" name="jusqua" class="form-select" style="max-width: 12rem">
+                <option value="0">Aucun tome</option>
+                @for (var n = 1; n <= Catalog.TotalVolumes; n++)
+                {
+                    <option value="@n" selected="@(n == state.MaxRead)">Tome @n</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-primary">Mettre à jour</button>
+        </form>
+    </section>
+
+    <section class="panel">
+        <h2 class="h5 mb-2"><icon name="eye-slash" /> Mode sans spoiler</h2>
+        <p class="small text-body-secondary">
+            @if (state.HideSpoilers)
+            {
+                <span>Activé. Le résumé, les avis et les nouveaux personnages des arcs après le tome @state.MaxRead sont masqués. Tu peux toujours les afficher d'un clic.</span>
+            }
+            else
+            {
+                <span>Désactivé. Tout le guide s'affiche, y compris les arcs que tu n'as pas encore lus.</span>
+            }
+        </p>
+        <form method="post" asp-page-handler="Spoilers">
+            <input type="hidden" name="masquer" value="@(state.HideSpoilers ? "false" : "true")" />
+            <button type="submit" class="btn btn-outline-secondary">@(state.HideSpoilers ? "Désactiver" : "Activer") le mode sans spoiler</button>
+        </form>
+    </section>
+</div>

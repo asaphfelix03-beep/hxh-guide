@@ -1,0 +1,137 @@
+@page "/Arcs/{slug}"
+@model HxhGuide.Pages.Arcs.DetailModel
+@{
+    var arc = Model.Arc;
+    ViewData["Title"] = arc.Title;
+    var canSee = Model.State.CanSee(arc);
+    var previous = arc.Order > 1 ? Catalog.Arcs[arc.Order - 2] : null;
+    var next = arc.Order < Catalog.Arcs.Count ? Catalog.Arcs[arc.Order] : null;
+}
+
+<header class="arc-header arc-@arc.Slug">
+    <nav aria-label="Fil d'Ariane" class="small"><a href="/Arcs">Arcs</a> / Arc @arc.Order</nav>
+    <h1 class="display-title">@arc.Title</h1>
+    <p class="arc-header-meta">
+        @arc.Volumes, @arc.Chapters.ToLowerInvariant()@(arc.Ongoing ? ". En cours de parution" : "")
+    </p>
+    <div class="d-flex flex-wrap align-items-center gap-3">
+        @if (Model.Rating is { } rating)
+        {
+            <span><stars count="@((int)Math.Round(rating.Average))" max="5" /> <strong>@rating.Average.ToString("0.0")</strong> sur 5, @rating.Count avis</span>
+        }
+        @if (Model.State.SignedIn)
+        {
+            <span class="text-body-secondary">Tu as lu @Model.State.ArcRead(arc) tome(s) sur @arc.VolumeCount.</span>
+        }
+    </div>
+</header>
+
+<div class="split mt-4">
+    <section>
+        <h2 class="h5 mb-2">Résumé</h2>
+        @if (canSee)
+        {
+            <p class="arc-summary">@arc.Summary</p>
+        }
+        else
+        {
+            <details class="spoiler">
+                <summary><icon name="eye-slash" /> Résumé masqué : tu n'as pas encore atteint cet arc. Afficher quand même.</summary>
+                <p class="arc-summary mt-2 mb-0">@arc.Summary</p>
+            </details>
+        }
+
+        <h2 class="h5 mt-4 mb-3">Personnages introduits</h2>
+        @if (Model.Characters.Count == 0)
+        {
+            <p class="text-body-secondary">Pas de nouveau personnage principal dans cet arc.</p>
+        }
+        else
+        {
+            <div class="character-grid">
+                @foreach (var card in Model.Characters)
+                {
+                    <partial name="_CharacterCard" model="card" />
+                }
+            </div>
+        }
+
+        <h2 class="h5 mt-5 mb-3">Avis des lecteurs <span class="text-body-secondary fw-normal">(@Model.Reviews.Count)</span></h2>
+        @if (Model.Reviews.Count == 0)
+        {
+            <p class="text-body-secondary">Aucun avis pour l'instant. Sois le premier à donner le tien.</p>
+        }
+        else if (canSee)
+        {
+            <div class="review-list">
+                @foreach (var review in Model.Reviews)
+                {
+                    <partial name="_Review" model="review" />
+                }
+            </div>
+        }
+        else
+        {
+            <details class="spoiler">
+                <summary><icon name="eye-slash" /> @Model.Reviews.Count avis masqué(s) : ils peuvent contenir des spoilers. Afficher quand même.</summary>
+                <div class="review-list mt-3">
+                    @foreach (var review in Model.Reviews)
+                    {
+                        <partial name="_Review" model="review" />
+                    }
+                </div>
+            </details>
+        }
+    </section>
+
+    <aside>
+        <section class="panel">
+            <h2 class="h5 mb-3">@(Model.HasMyReview ? "Modifier mon avis" : "Donner mon avis")</h2>
+            @if (Model.State.SignedIn)
+            {
+                <form method="post" asp-page-handler="Review" asp-route-slug="@arc.Slug" novalidate>
+                    <fieldset class="mb-3">
+                        <legend class="form-label">Ta note</legend>
+                        @* Étoiles dans l'ordre 5→1, affichées à l'envers : survoler une étoile allume aussi celles d'avant. *@
+                        <div class="stars-input">
+                            @for (var s = 5; s >= 1; s--)
+                            {
+                                <input type="radio" class="btn-check" name="Input.Rating" id="rating-@s" value="@s" checked="@(Model.Input.Rating == s)" />
+                                <label for="rating-@s" title="@s étoile(s)"><icon name="star-fill" /><span class="visually-hidden">@s étoile(s)</span></label>
+                            }
+                        </div>
+                    </fieldset>
+                    <span asp-validation-for="Input.Rating" class="text-danger small d-block mb-2"></span>
+                    <div class="mb-3">
+                        <label asp-for="Input.Text" class="form-label"></label>
+                        <textarea asp-for="Input.Text" class="form-control" rows="4" maxlength="1000" placeholder="Ce que tu as aimé (ou pas), sans spoiler si possible."></textarea>
+                        <span asp-validation-for="Input.Text" class="text-danger small"></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Enregistrer mon avis</button>
+                </form>
+                @if (Model.HasMyReview)
+                {
+                    <form method="post" asp-page-handler="DeleteReview" asp-route-slug="@arc.Slug" class="mt-2" data-confirm="Supprimer ton avis sur cet arc ?">
+                        <button type="submit" class="btn btn-sm btn-link text-danger p-0">Supprimer mon avis</button>
+                    </form>
+                }
+            }
+            else
+            {
+                <p class="mb-3 text-body-secondary">Connecte-toi pour noter cet arc et suivre ta lecture.</p>
+                <a class="btn btn-primary w-100" href="/Compte/Connexion?retour=/Arcs/@arc.Slug">Se connecter</a>
+            }
+        </section>
+
+        <nav class="arc-pager mt-4" aria-label="Arcs voisins">
+            @if (previous is not null)
+            {
+                <a href="/Arcs/@previous.Slug"><icon name="arrow-left" /> @previous.Title</a>
+            }
+            @if (next is not null)
+            {
+                <a class="ms-auto text-end" href="/Arcs/@next.Slug">@next.Title <icon name="arrow-left" class="flip" /></a>
+            }
+        </nav>
+    </aside>
+</div>

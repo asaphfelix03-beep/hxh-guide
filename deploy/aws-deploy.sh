@@ -1,5 +1,5 @@
 #!/bin/bash
-# Déploie TaskFlow sur une instance EC2 avec AWS CLI v2.
+# Déploie le Guide H×H sur une instance EC2 avec AWS CLI v2.
 # Crée (ou réutilise) : une paire de clés SSH, un Security Group et une instance t3.micro
 # Amazon Linux 2023 qui exécute deploy/user-data.sh au premier démarrage.
 #
@@ -10,7 +10,7 @@ export MSYS_NO_PATHCONV=1   # Git Bash sous Windows : ne pas convertir les argum
 
 cd "$(dirname "$0")/.."
 
-NAME="taskflow"
+NAME="hxh"
 KEY_NAME="$NAME-key"
 SG_NAME="$NAME-sg"
 INSTANCE_NAME="$NAME-server"
@@ -46,7 +46,7 @@ SG_ID=$(aws ec2 describe-security-groups \
   --query 'SecurityGroups[0].GroupId' --output text)
 if [ "$SG_ID" = "None" ]; then
   SG_ID=$(aws ec2 create-security-group --group-name "$SG_NAME" --vpc-id "$VPC_ID" \
-    --description "TaskFlow - HTTP public, SSH restreint" --query GroupId --output text)
+    --description "Guide HxH - web public, SSH restreint" --query GroupId --output text)
   # MY_IP peut être fourni (ex. depuis CloudShell, pour autoriser l'IP de ton PC et non celle de CloudShell)
   MY_IP="${MY_IP:-$(curl -fs https://checkip.amazonaws.com | tr -d '[:space:]')}"
   aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 22 --cidr "$MY_IP/32" >/dev/null
@@ -100,7 +100,7 @@ echo -n "==> Attente de l'application"
 for _ in $(seq 1 60); do
   if curl -fs -m 5 "$URL/health" >/dev/null 2>&1; then
     echo
-    echo "==> TaskFlow est en ligne : $URL"
+    echo "==> Le Guide H×H est en ligne : $URL"
     curl -s "$URL/health"
     echo
     echo "==> SSH : ssh -i $KEY_NAME.pem ec2-user@$PUBLIC_IP"

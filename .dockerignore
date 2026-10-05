@@ -8,3 +8,4 @@ deploy/
 *.md
 Dockerfile
 docker-compose.yml
+.playwright-mcp/

@@ -6,3 +6,4 @@ obj/
 *.user
 *.pem
 .env
+.playwright-mcp/

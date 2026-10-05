@@ -1,0 +1,14 @@
+@model ReviewView
+
+<article class="review">
+    <header class="review-head">
+        <avatar name="@Model.Author" class="avatar-sm" />
+        <strong>@Model.Author</strong>
+        <stars count="@Model.Rating" max="5" class="ms-auto" />
+    </header>
+    @if (!string.IsNullOrWhiteSpace(Model.Text))
+    {
+        <p class="review-text">@Model.Text</p>
+    }
+    <time class="review-date" datetime="@Model.UpdatedAt.ToString("yyyy-MM-dd")">@Model.UpdatedAt.ToString("d MMMM yyyy")</time>
+</article>

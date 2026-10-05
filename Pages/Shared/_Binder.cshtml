@@ -1,0 +1,25 @@
+@model HxhGuide.Pages.BinderModel
+
+@* Le classeur : un emplacement de carte par tome, comme le classeur de Greed Island. *@
+<div class="binder @(Model.Compact ? "binder-compact" : "")">
+    @for (var n = 1; n <= Catalog.TotalVolumes; n++)
+    {
+        var arc = Catalog.MainArcOfVolume(n);
+        var read = Model.State.Read.Contains(n);
+        var label = $"Tome {n} ({string.Join(", ", Catalog.ArcsOfVolume(n).Select(a => a.Title))}) : {(read ? "lu" : "pas encore lu")}";
+        if (Model.Interactive)
+        {
+            <button type="submit" name="tome" value="@n" form="binder-form" id="tome-@n"
+                    class="slot arc-@arc.Slug @(read ? "is-read" : "")" aria-pressed="@(read ? "true" : "false")" title="@label">
+                <span class="slot-number">@n</span>
+                <span class="slot-arc">@arc.Title</span>
+            </button>
+        }
+        else
+        {
+            <span class="slot arc-@arc.Slug @(read ? "is-read" : "")" title="@label">
+                <span class="slot-number">@n</span>
+            </span>
+        }
+    }
+</div>

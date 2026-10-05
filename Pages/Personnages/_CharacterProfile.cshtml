@@ -1,0 +1,47 @@
+@model HxhGuide.Pages.Personnages.DetailModel
+@{
+    var c = Model.Character;
+    var nen = c.Nen?.Info();
+}
+
+<article class="profile @(nen is null ? "nen-none" : $"nen-{nen.Slug}")">
+    <avatar name="@c.Name" nen="@c.Nen" class="avatar-xl" />
+    <div class="min-w-0">
+        <h1 class="display-title h2 mb-2">@c.Name</h1>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <nen-chip type="@c.Nen" />
+            <span class="text-body-secondary">@c.Affiliation</span>
+        </div>
+        <p class="lead">@c.Description</p>
+
+        <dl class="facts">
+            <div><dt>Première apparition</dt><dd><a href="/Arcs/@c.FirstArc.Slug">@c.FirstArc.Title</a></dd></div>
+            @if (c.Ability is { } ability)
+            {
+                <div><dt>Capacité emblématique</dt><dd>@ability</dd></div>
+            }
+            <div><dt>Favori de</dt><dd>@Model.FavoriteCount lecteur(s)</dd></div>
+        </dl>
+
+        @if (nen is not null)
+        {
+            <p class="small text-body-secondary">
+                <strong>@nen.Name</strong> : @nen.Power <a href="/Nen">Comprendre les types de Nen</a>
+            </p>
+        }
+
+        @if (Model.State.SignedIn)
+        {
+            <form method="post" asp-page-handler="Favorite" asp-route-slug="@c.Slug">
+                <button type="submit" class="btn @(Model.IsFavorite ? "btn-outline-secondary" : "btn-primary")">
+                    <icon name="@(Model.IsFavorite ? "heart-fill" : "heart")" />
+                    @(Model.IsFavorite ? "Retirer de mes favoris" : "Ajouter à mes favoris")
+                </button>
+            </form>
+        }
+        else
+        {
+            <a class="btn btn-outline-secondary" href="/Compte/Connexion?retour=/Personnages/@c.Slug"><icon name="heart" /> Se connecter pour l'ajouter aux favoris</a>
+        }
+    </div>
+</article>

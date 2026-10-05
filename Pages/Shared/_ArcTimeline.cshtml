@@ -1,0 +1,18 @@
+@model ReaderState
+
+@* Frise des arcs : chaque segment est proportionnel au nombre de tomes ; il se remplit avec la lecture. *@
+<ol class="timeline" aria-label="Frise des arcs du manga">
+    @foreach (var arc in Catalog.Arcs)
+    {
+        var percent = Model.SignedIn ? Model.ArcPercent(arc) : 0;
+        <li class="timeline-arc arc-@arc.Slug" style="flex-grow: @arc.VolumeCount">
+            <a href="/Arcs/@arc.Slug" title="@arc.Title, @arc.Volumes.ToLowerInvariant()">
+                <span class="timeline-bar">
+                    <span class="timeline-fill" style="width: @percent%"></span>
+                </span>
+                <span class="timeline-label">@arc.Title</span>
+                <span class="timeline-volumes">@(arc.FirstVolume == arc.LastVolume ? $"T.{arc.FirstVolume}" : $"T.{arc.FirstVolume}–{arc.LastVolume}{(arc.Ongoing ? "+" : "")}")</span>
+            </a>
+        </li>
+    }
+</ol>

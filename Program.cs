@@ -1,13 +1,13 @@
 using System.Text.Encodings.Web;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
-using Microsoft.Extensions.WebEncoders;
+using HxhGuide.Endpoints;
+using HxhGuide.Models;
+using HxhGuide.Persistence;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using TaskFlow.Endpoints;
-using TaskFlow.Models;
-using TaskFlow.Persistence;
+using Microsoft.Extensions.WebEncoders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +18,7 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure()));
 
-builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
+builder.Services.AddIdentity<Reader, IdentityRole>(options =>
     {
         options.User.RequireUniqueEmail = true;
         options.Password.RequiredLength = 8;
@@ -34,9 +34,11 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.Cookie.Name = "taskflow.auth";
-    options.LoginPath = "/Account/Login";
-    options.AccessDeniedPath = "/Account/Login";
+    options.Cookie.Name = "guide.session";
+    options.LoginPath = "/Compte/Connexion";
+    options.LogoutPath = "/Compte/Deconnexion";
+    options.AccessDeniedPath = "/Compte/Connexion";
+    options.ReturnUrlParameter = "retour";
     options.ExpireTimeSpan = TimeSpan.FromDays(14);
     options.SlidingExpiration = true;
     // L'API répond 401 au lieu de rediriger vers la page de connexion.
@@ -56,15 +58,13 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddDataProtection()
     .PersistKeysToDbContext<AppDbContext>()
-    .SetApplicationName("TaskFlow");
+    .SetApplicationName("HxhGuide");
 
 builder.Services.AddRazorPages(options =>
 {
-    // Tout est privé par défaut, sauf l'accueil, les pages de compte et la page d'erreur.
-    options.Conventions.AuthorizeFolder("/");
-    options.Conventions.AllowAnonymousToPage("/Index");
-    options.Conventions.AllowAnonymousToPage("/Error");
-    options.Conventions.AllowAnonymousToFolder("/Account");
+    // Le guide est public. Seul le classeur (suivi de lecture) demande un compte ;
+    // les avis et favoris sont vérifiés dans leurs actions.
+    options.Conventions.AuthorizePage("/Classeur");
 });
 
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -90,12 +90,12 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
 }
+
 // Pages d'erreur HTML (404...) pour le site, mais pas pour l'API qui garde des réponses JSON.
 app.UseWhen(
     context => !context.Request.Path.StartsWithSegments("/api"),
     site => site.UseStatusCodePagesWithReExecute("/Error", "?code={0}"));
 
-// HTTPS est géré par Caddy devant l'application (ASPNETCORE_FORWARDEDHEADERS_ENABLED=true).
 app.UseRequestLocalization(options => options
     .SetDefaultCulture("fr-FR")
     .AddSupportedCultures("fr-FR")
@@ -107,7 +107,7 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 app.MapRazorPages().WithStaticAssets();
-app.MapTaskFlowApi();
+app.MapGuideApi();
 app.MapHealth();
 
 app.Run();

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace TaskFlow.Persistence;
+namespace HxhGuide.Persistence;
 
 /// <summary>Messages d'erreur d'inscription et de connexion en français.</summary>
 public class FrenchIdentityErrorDescriber : IdentityErrorDescriber

@@ -92,8 +92,7 @@ Les 21 portraits (`wwwroot/images/personnages/*.svg`) sont des **illustrations o
 (style plat, traits reconnaissables : coiffure, couleurs, accessoires), générées par `deploy/portraits/generate.sh`.
 Aucune image officielle n'est utilisée.
 
-
-Déposer une image par personnage dans `wwwroot/images/personnages/`, nommée d'après son identifiant
+Pour remplacer un portrait, déposer une image par personnage dans `wwwroot/images/personnages/`, nommée d'après son identifiant
 (`gon-freecss.webp`, `killua-zoldyck.webp`…, liste dans `wwwroot/images/personnages/LISEZMOI.md`),
 puis reconstruire l'image. Sans fichier, le personnage garde son avatar à initiales.
 N'utiliser que des images que l'on a le droit de publier, et citer leur source ici.

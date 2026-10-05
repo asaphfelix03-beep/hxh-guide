@@ -86,6 +86,13 @@ docker compose up --build
 
 Ouvrir http://localhost:8081 (compte `demo@guide.local` / `Demo1234`).
 
+### Ajouter des portraits de personnages (facultatif)
+
+Déposer une image par personnage dans `wwwroot/images/personnages/`, nommée d'après son identifiant
+(`gon-freecss.webp`, `killua-zoldyck.webp`…, liste dans `wwwroot/images/personnages/LISEZMOI.md`),
+puis reconstruire l'image. Sans fichier, le personnage garde son avatar à initiales.
+N'utiliser que des images que l'on a le droit de publier, et citer leur source ici.
+
 ## 4. Publier l'image
 
 ```bash

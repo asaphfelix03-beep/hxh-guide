@@ -1356,3 +1356,12 @@ button.slot.is-read:hover {
 legend.form-label {
     font-size: 1rem;
 }
+
+/* Portrait d'un personnage (image facultative) : même cercle et même aura de Nen que les avatars. */
+.avatar.portrait {
+    display: inline-block;
+    padding: 0;
+    object-fit: cover;
+    object-position: center top;
+    background: var(--ah-lane);
+}

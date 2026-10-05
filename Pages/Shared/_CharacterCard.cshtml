@@ -6,7 +6,7 @@
 @if (Model.Visible)
 {
     <article class="character-card">
-        <avatar name="@c.Name" nen="@c.Nen" class="avatar-lg" />
+        <portrait character="@c" class="avatar-lg" />
         <div class="min-w-0">
             <h3 class="character-name"><a href="/Personnages/@c.Slug" class="stretched-link">@c.Name</a></h3>
             <p class="character-affiliation">@c.Affiliation</p>

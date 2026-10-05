@@ -62,6 +62,8 @@ builder.Services.AddDataProtection()
     .PersistKeysToDbContext<AppDbContext>()
     .SetApplicationName("HxhGuide");
 
+builder.Services.AddSingleton<CharacterImages>();
+
 builder.Services.AddRazorPages(options =>
 {
     // Le guide est public. Seul le classeur (suivi de lecture) demande un compte ;

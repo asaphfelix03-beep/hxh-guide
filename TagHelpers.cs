@@ -40,6 +40,41 @@ public class AvatarTagHelper : TagHelper
     }
 }
 
+/// <summary>
+/// &lt;portrait character="@c" class="avatar-lg" /&gt; → image du personnage si elle existe
+/// (wwwroot/images/personnages), sinon avatar à initiales. Toujours entouré de la couleur de son Nen.
+/// </summary>
+[HtmlTargetElement("portrait", TagStructure = TagStructure.WithoutEndTag)]
+public class PortraitTagHelper(CharacterImages images) : TagHelper
+{
+    public Character Character { get; set; } = null!;
+
+    public override void Process(TagHelperContext context, TagHelperOutput output)
+    {
+        var extra = output.Attributes["class"]?.Value?.ToString();
+        var nen = Character.Nen is { } type ? $"nen-{type.Info().Slug}" : "nen-none";
+        var url = images.UrlFor(Character.Slug);
+        output.Attributes.SetAttribute("class", $"avatar {nen} {(url is null ? "" : "portrait")} {extra}".Trim().Replace("  ", " "));
+        output.Attributes.SetAttribute("title", Character.Name);
+
+        if (url is not null)
+        {
+            output.TagName = "img";
+            output.TagMode = TagMode.SelfClosing;
+            output.Attributes.SetAttribute("src", url);
+            output.Attributes.SetAttribute("alt", $"Portrait de {Character.Name}");
+            output.Attributes.SetAttribute("loading", "lazy");
+            output.Attributes.SetAttribute("decoding", "async");
+        }
+        else
+        {
+            output.TagName = "span";
+            output.TagMode = TagMode.StartTagAndEndTag;
+            output.Content.SetContent(Initials.Of(Character.Name));
+        }
+    }
+}
+
 /// <summary>&lt;nen-chip type="..." /&gt; → pastille colorée avec le nom du type de Nen.</summary>
 [HtmlTargetElement("nen-chip", TagStructure = TagStructure.WithoutEndTag)]
 public class NenChipTagHelper : TagHelper

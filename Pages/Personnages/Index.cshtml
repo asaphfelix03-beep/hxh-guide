@@ -16,14 +16,14 @@
 </p>
 
 <form method="get" class="filters">
-    <select name="nen" class="form-select form-select-sm" aria-label="Filtrer par type de Nen" onchange="this.form.requestSubmit()">
+    <select name="nen" class="form-select form-select-sm" aria-label="Filtrer par type de Nen" data-autosubmit>
         <option value="">Tous les types de Nen</option>
         @foreach (var option in nenOptions)
         {
             <option value="@option.Value" selected="@option.Selected">@option.Text</option>
         }
     </select>
-    <select name="arc" class="form-select form-select-sm" aria-label="Filtrer par arc d'apparition" onchange="this.form.requestSubmit()">
+    <select name="arc" class="form-select form-select-sm" aria-label="Filtrer par arc d'apparition" data-autosubmit>
         <option value="">Tous les arcs</option>
         @foreach (var option in arcOptions)
         {
@@ -33,7 +33,7 @@
     @if (Model.State.SignedIn)
     {
         <div class="form-check form-switch mb-0">
-            <input class="form-check-input" type="checkbox" role="switch" id="favoris" name="favoris" value="true" checked="@Model.OnlyFavorites" onchange="this.form.requestSubmit()" />
+            <input class="form-check-input" type="checkbox" role="switch" id="favoris" name="favoris" value="true" checked="@Model.OnlyFavorites" data-autosubmit />
             <label class="form-check-label small" for="favoris">Mes favoris</label>
         </div>
     }

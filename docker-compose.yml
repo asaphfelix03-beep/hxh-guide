@@ -11,6 +11,10 @@ services:
     environment:
       ConnectionStrings__Default: "Host=db;Database=guide;Username=guide;Password=guide"
       Seed__Demo: "true"
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
     depends_on:
       db:
         condition: service_healthy

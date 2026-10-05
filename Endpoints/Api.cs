@@ -54,7 +54,6 @@ public static class Api
                 status = databaseOk ? "healthy" : "unhealthy",
                 database = databaseOk ? "ok" : "unreachable",
                 version = AppInfo.Version,
-                host = Environment.MachineName,
                 timeUtc = DateTime.UtcNow,
             };
             return databaseOk ? Results.Ok(body) : Results.Json(body, statusCode: StatusCodes.Status503ServiceUnavailable);

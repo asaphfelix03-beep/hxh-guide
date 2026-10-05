@@ -20,3 +20,10 @@ document.addEventListener("submit", (event) => {
         event.preventDefault();
     }
 });
+
+// Filtres : les champs data-autosubmit envoient leur formulaire dès qu'ils changent.
+document.addEventListener("change", (event) => {
+    if (event.target.matches("[data-autosubmit]")) {
+        event.target.form?.requestSubmit();
+    }
+});

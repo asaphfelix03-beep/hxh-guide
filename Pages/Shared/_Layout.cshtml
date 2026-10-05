@@ -11,19 +11,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewData["Title"] · Le Guide H×H</title>
     <meta name="description" content="Le guide du manga Hunter × Hunter : arcs, personnages, Nen, et ton suivi de lecture tome par tome, sans spoiler." />
-    <script>
-        // Applique le thème avant l'affichage pour éviter un flash blanc en mode sombre.
-        (function () {
-            var theme = null;
-            try { theme = localStorage.getItem("theme"); } catch (e) { }
-            if (theme !== "light" && theme !== "dark") {
-                theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-            }
-            document.documentElement.setAttribute("data-bs-theme", theme);
-        })();
-    </script>
+    <script src="~/js/theme.js" asp-append-version="true"></script>
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml" />
-    <link rel="preload" href="~/fonts/dela-gothic-one-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <script src="~/js/site.js" asp-append-version="true" defer></script>

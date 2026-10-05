@@ -32,7 +32,7 @@ PUBLIC_IP=$(curl -fsS -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.2
 if [ ! -f .env ]; then
   cat > .env <<EOF
 DOMAIN=${PUBLIC_IP//./-}.sslip.io
-IMAGE=asaph01/hxh-guide:1.0
+IMAGE=asaph01/hxh-guide:1.1
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
 SEED_DEMO=true
 EOF

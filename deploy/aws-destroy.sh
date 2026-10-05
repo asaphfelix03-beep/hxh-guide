@@ -26,6 +26,14 @@ if [ "$SG_ID" != "None" ]; then
   aws ec2 delete-security-group --group-id "$SG_ID"
 fi
 
+if aws iam get-instance-profile --instance-profile-name "$NAME-ssm-profile" >/dev/null 2>&1; then
+  echo "==> Suppression du rôle IAM $NAME-ssm-role"
+  aws iam remove-role-from-instance-profile --instance-profile-name "$NAME-ssm-profile" --role-name "$NAME-ssm-role"
+  aws iam delete-instance-profile --instance-profile-name "$NAME-ssm-profile"
+  aws iam detach-role-policy --role-name "$NAME-ssm-role" --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  aws iam delete-role --role-name "$NAME-ssm-role"
+fi
+
 if aws ec2 describe-key-pairs --key-names "$NAME-key" >/dev/null 2>&1; then
   echo "==> Suppression de la paire de clés $NAME-key"
   aws ec2 delete-key-pair --key-name "$NAME-key"

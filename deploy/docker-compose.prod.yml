@@ -1,7 +1,15 @@
-# Production sur EC2 : 3 conteneurs sur un réseau privé Docker.
-#   caddy (ports 80/443, HTTPS automatique)  ->  app (8080, non exposé)  ->  db (5432, non exposé)
+# Production sur EC2 : 3 conteneurs, 2 réseaux Docker cloisonnés.
+#   Internet -> caddy (80/443, HTTPS automatique) -[front]-> app (8080) -[back, interne]-> db (5432)
+#   Caddy ne peut pas joindre la base ; la base n'a aucun accès à Internet.
 # Variables dans le fichier .env voisin (voir .env.example).
 name: hxh-guide
+
+# Journaux limités à 3 x 10 Mo par conteneur : le disque ne peut pas se remplir.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
   caddy:
@@ -17,19 +25,33 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data      # certificats Let's Encrypt
       - caddy_config:/config
+    networks: [front]
     depends_on:
       - app
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]   # seul droit nécessaire : écouter sur les ports 80 et 443
+    mem_limit: 128m
+    logging: *logging
 
   app:
-    image: ${IMAGE:-asaph01/hxh-guide:1.0}
+    image: ${IMAGE:-asaph01/hxh-guide:1.1}
     restart: unless-stopped
     environment:
       ConnectionStrings__Default: "Host=db;Database=guide;Username=guide;Password=${POSTGRES_PASSWORD}"
       Seed__Demo: ${SEED_DEMO:-true}
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"   # l'app sait que la requête d'origine était en HTTPS
+    networks: [front, back]
     depends_on:
       db:
         condition: service_healthy
+    # Durcissement : utilisateur non-root (image), aucun privilège Linux, système de fichiers en lecture seule.
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    mem_limit: 384m
+    logging: *logging
 
   db:
     image: postgres:17-alpine
@@ -40,11 +62,20 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks: [back]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U guide -d guide"]
       interval: 5s
       timeout: 3s
       retries: 10
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 384m
+    logging: *logging
+
+networks:
+  front:
+  back:
+    internal: true   # pas de sortie vers Internet
 
 volumes:
   pgdata:

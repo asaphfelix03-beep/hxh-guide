@@ -15,6 +15,7 @@ public class ErrorModel : PageModel
         404 => ("Introuvable", "Cette page n'existe pas. Vérifie l'adresse, ou repars de l'accueil."),
         403 => ("Accès refusé", "Tu n'as pas accès à cette page."),
         400 => ("Requête invalide", "La page a expiré. Recharge-la puis réessaie."),
+        429 => ("Trop de tentatives", "Par sécurité, attends une minute avant de réessayer."),
         _ => ("Une erreur est survenue", "Réessaie dans un instant."),
     };
 }

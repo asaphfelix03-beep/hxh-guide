@@ -4,21 +4,20 @@ WORKDIR /src
 
 # On copie d'abord le .csproj seul : tant qu'il ne change pas,
 # Docker réutilise le cache du "restore" (téléchargement des paquets NuGet).
+# ReadyToRun : code précompilé pour Linux x64 (instance t3.micro), démarrage plus rapide du conteneur.
 COPY TaskFlow.csproj .
-RUN dotnet restore
+RUN dotnet restore -r linux-x64 -p:PublishReadyToRun=true
 
 COPY . .
-RUN dotnet publish -c Release -o /app/publish --no-restore
+RUN dotnet publish -c Release -o /app/publish -r linux-x64 --self-contained false \
+    -p:PublishReadyToRun=true --no-restore
 
 # ---------- Étape 2 : exécution (image légère, runtime ASP.NET seulement) ----------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
-
-# Dossier de la base SQLite, appartenant à l'utilisateur non-root "app" fourni par l'image.
-RUN mkdir -p /app/data && chown $APP_UID /app/data
-
 COPY --from=build /app/publish .
 
+# Utilisateur non-root fourni par l'image officielle.
 USER $APP_UID
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080

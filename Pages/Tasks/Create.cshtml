@@ -1,17 +1,20 @@
-@page
-@model CreateModel
+@page "{projectId:int}"
+@model TaskFlow.Pages.Tasks.CreateModel
 @{
     ViewData["Title"] = "Nouvelle tâche";
 }
 
 <div class="row justify-content-center">
-    <div class="col-lg-7">
+    <div class="col-lg-8 col-xl-7">
+        <nav aria-label="Fil d'Ariane" class="small mb-1">
+            <a href="/Projects">Projets</a> / <a href="/Projects/Board/@Model.Project.Id">@Model.Project.Name</a> /
+        </nav>
         <h1 class="h3 mb-3">Nouvelle tâche</h1>
-        <form method="post" class="card card-body shadow-sm">
-            <partial name="_TaskForm" for="Input" />
+        <form method="post" class="card card-body shadow-sm" novalidate>
+            <partial name="_TaskForm" model="Model" />
             <div class="d-flex gap-2 mt-4">
                 <button type="submit" class="btn btn-primary">Créer la tâche</button>
-                <a class="btn btn-outline-secondary" asp-page="/Index">Annuler</a>
+                <a class="btn btn-outline-secondary" href="/Projects/Board/@Model.Project.Id">Annuler</a>
             </div>
         </form>
     </div>

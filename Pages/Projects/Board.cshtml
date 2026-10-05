@@ -1,0 +1,104 @@
+@page "{id:int}"
+@model TaskFlow.Pages.Projects.BoardModel
+@{
+    ViewData["Title"] = Model.Project.Name;
+    ViewData["FullWidth"] = true;
+}
+
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+    <div class="me-auto min-w-0">
+        <nav aria-label="Fil d'Ariane" class="small"><a href="/Projects">Projets</a> /</nav>
+        <h1 class="h3 mb-0 text-truncate">@Model.Project.Name</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Project.Description))
+        {
+            <p class="text-body-secondary small mb-0">@Model.Project.Description</p>
+        }
+    </div>
+    <span class="avatar-stack" aria-label="Membres">
+        @foreach (var member in Model.Members)
+        {
+            <avatar user-id="@member.Id" name="@member.Name" />
+        }
+    </span>
+    <a class="btn btn-outline-secondary" href="/Projects/Settings/@Model.Project.Id"><icon name="gear" /> <span class="d-none d-sm-inline">Paramètres</span></a>
+    <a class="btn btn-primary" href="/Tasks/Create/@Model.Project.Id"><icon name="plus-lg" /> Nouvelle tâche</a>
+</div>
+
+<div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+    <div class="input-icon board-filter">
+        <icon name="search" />
+        <input type="search" class="form-control form-control-sm" placeholder="Filtrer : titre, #étiquette, personne" aria-label="Filtrer les tâches" data-board-filter />
+    </div>
+    <div class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" role="switch" id="only-mine" data-board-mine />
+        <label class="form-check-label small" for="only-mine">Mes tâches</label>
+    </div>
+    <span class="small text-body-secondary ms-auto d-none d-lg-inline"><icon name="grip-vertical" /> Glissez les cartes d'une colonne à l'autre.</span>
+</div>
+
+@* Formulaire invisible : fournit l'URL et le jeton anti-CSRF utilisés par board.js. *@
+<form id="move-form" method="post" asp-page-handler="Move" asp-route-id="@Model.Project.Id" hidden></form>
+
+<div class="board" data-me="@Model.CurrentUserId">
+    @foreach (var (state, tasks) in Model.Columns)
+    {
+        <section class="board-column" data-state="@state" aria-label="@state.Label()">
+            <header class="board-column-header">
+                <span class="state-dot state-@state.ToString().ToLowerInvariant()"></span>
+                <h2 class="h6 mb-0">@state.Label()</h2>
+                <span class="badge rounded-pill count-badge ms-auto" data-count>@tasks.Count</span>
+            </header>
+
+            <div class="board-cards" data-dropzone>
+                @foreach (var task in tasks)
+                {
+                    var search = $"{task.Title} {string.Join(" ", task.TagList.Select(t => "#" + t))} {task.Assignee?.DisplayName}".ToLowerInvariant();
+                    <article class="task-card @(task.State == TaskState.Done ? "is-done" : "")" draggable="true"
+                             data-id="@task.Id" data-assignee="@task.AssigneeId" data-search="@search">
+                        <a class="task-card-title stretched-link" href="/Tasks/Edit/@task.Id" draggable="false">@task.Title</a>
+                        @if (task.TagList.Count > 0)
+                        {
+                            <div class="task-tags">
+                                @foreach (var tag in task.TagList)
+                                {
+                                    <tag-chip value="@tag" />
+                                }
+                            </div>
+                        }
+                        <div class="task-meta">
+                            @if (task.Priority == Priority.High)
+                            {
+                                <span class="priority priority-high" title="Priorité haute"><icon name="flag-fill" /></span>
+                            }
+                            else if (task.Priority == Priority.Low)
+                            {
+                                <span class="priority priority-low" title="Priorité basse"><icon name="flag-fill" /></span>
+                            }
+                            @if (task.DueDate is { } due)
+                            {
+                                <span class="due @(task.IsOverdue(Model.Today) ? "due-late" : "")" title="Échéance">
+                                    <icon name="calendar-event" /> @due.ToString("d MMM")
+                                </span>
+                            }
+                            @if (task.Assignee is { } assignee)
+                            {
+                                <avatar user-id="@assignee.Id" name="@assignee.DisplayName" class="avatar-sm ms-auto" />
+                            }
+                        </div>
+                    </article>
+                }
+                <p class="board-empty">Déposez une tâche ici</p>
+            </div>
+
+            <form method="post" asp-page-handler="QuickAdd" asp-route-id="@Model.Project.Id" class="quick-add">
+                <input type="hidden" name="state" value="@state" />
+                <input name="title" class="form-control form-control-sm" placeholder="+ Ajouter une tâche" maxlength="100" required
+                       aria-label="Ajouter une tâche dans @state.Label()" />
+            </form>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/board.js" asp-append-version="true" defer></script>
+}

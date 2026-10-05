@@ -1,15 +1,31 @@
 # Pour tester en local : docker compose up --build  ->  http://localhost:8081
-# (port 8081 de la machine -> port 8080 du conteneur ; sur EC2 on utilisera 80 -> 8080)
+# Compte de démo : demo@taskflow.local / Demo1234
 services:
-  taskflow:
+  app:
     build: .
     image: taskflow:local
-    container_name: taskflow
     ports:
       - "8081:8080"
+    environment:
+      ConnectionStrings__Default: "Host=db;Database=taskflow;Username=taskflow;Password=taskflow"
+      Seed__Demo: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: taskflow
+      POSTGRES_USER: taskflow
+      POSTGRES_PASSWORD: taskflow
     volumes:
-      - taskdata:/app/data
-    restart: unless-stopped
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskflow -d taskflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
 volumes:
-  taskdata:
+  pgdata:

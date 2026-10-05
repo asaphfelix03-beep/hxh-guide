@@ -1,258 +1,182 @@
-# TaskFlow — Gestionnaire de tâches conteneurisé et déployé sur AWS
+# TaskFlow — Gestion de projets en équipe, conteneurisée et déployée sur AWS
 
-Application web en **C# / ASP.NET Core (.NET 10)**, conteneurisée avec **Docker** et déployée sur une instance **AWS EC2**, accessible publiquement sur Internet.
+Application web collaborative en **C# / ASP.NET Core (.NET 10)** : comptes utilisateurs, projets partagés,
+tableau Kanban avec glisser-déposer. Elle tourne dans **3 conteneurs Docker** (Caddy, application, PostgreSQL)
+sur une instance **AWS EC2**, en **HTTPS**.
 
 | | Lien |
 |---|---|
+| Application en ligne | https://13-48-46-246.sslip.io |
 | Code source | https://github.com/asaphfelix03-beep/taskflow |
 | Image Docker | https://hub.docker.com/r/asaph01/taskflow |
-| Application en ligne | http://13.48.46.246 (EC2 t3.micro, région eu-north-1 Stockholm) |
+| Compte de démonstration | `demo@taskflow.local` / `Demo1234` |
 
-## 1. Présentation
+## 1. Fonctionnalités
 
-**Fonctionnalités**
-- Créer, modifier, supprimer des tâches (titre, description, priorité, échéance)
-- Marquer une tâche comme terminée, filtrer : toutes / en cours / terminées
-- Échéances dépassées mises en évidence
-- API REST JSON sur `/api/tasks`
-- Endpoint de supervision `/health` (état de la base, version, nom du conteneur)
+- **Comptes** : inscription, connexion (mot de passe haché par ASP.NET Core Identity, blocage après 5 échecs), déconnexion
+- **Projets d'équipe** : création, membres invités par e-mail, rôles propriétaire / membre, quitter ou supprimer un projet
+- **Tableau Kanban** : colonnes À faire / En cours / Terminé, **glisser-déposer** enregistré en base, ajout rapide, filtre instantané
+- **Tâches** : description, priorité, échéance (retards en rouge), **assignation** à un membre, **étiquettes** colorées
+- **Tableau de bord** : mes tâches ouvertes, en retard, à rendre sous 7 jours, terminées cette semaine, avancement des projets
+- **Recherche** dans tous ses projets (titre, description, #étiquette), filtres par colonne et « assignées à moi »
+- **Mode sombre**, interface responsive (mobile : colonnes défilables)
+- **API JSON** (`/api/projects`, `/api/projects/{id}/tasks`) réservée aux utilisateurs connectés
+- **Supervision** : `/health` (état de PostgreSQL, version, nom du conteneur)
+
+## 2. Architecture
+
+```
+            Internet
+               │  HTTPS :443 (HTTP :80 → redirection)
+               ▼
+┌──────────────────────── AWS eu-north-1 ─────────────────────────┐
+│ Security Group : 80/443 ouverts, 22 limité à mon IP             │
+│ ┌──────────────── Instance EC2 t3.micro (AL2023) ─────────────┐ │
+│ │  Docker Compose — réseau privé                              │ │
+│ │                                                             │ │
+│ │   caddy ──────────► app ─────────────► db                   │ │
+│ │   reverse proxy     ASP.NET Core 10    PostgreSQL 17        │ │
+│ │   certificat TLS    port 8080          port 5432            │ │
+│ │   Let's Encrypt     (non exposé)       (non exposé)         │ │
+│ │   compression          │                  │                 │ │
+│ │       │                │                  ▼                 │ │
+│ │   volume caddy_data    │             volume pgdata          │ │
+│ └────────────────────────┼────────────────────────────────────┘ │
+└──────────────────────────┼──────────────────────────────────────┘
+                           │ docker pull
+              Docker Hub : asaph01/taskflow:2.0
+```
+
+- Seul **Caddy** est exposé à Internet. L'application et la base ne sont joignables que sur le réseau Docker interne.
+- **sslip.io** transforme l'IP en nom de domaine (`13-48-46-246.sslip.io`), ce qui permet un vrai certificat HTTPS gratuit sans acheter de domaine.
+- Le **schéma de la base** est géré par des **migrations EF Core**, appliquées automatiquement au démarrage de l'application.
+- Les **clés de chiffrement des cookies** sont stockées en base : remplacer le conteneur ne déconnecte personne.
 
 **Technologies**
 
 | Couche | Choix |
 |---|---|
-| Langage / framework | C# 14, ASP.NET Core 10 (Razor Pages + Minimal API) |
-| Base de données | SQLite via Entity Framework Core 10 |
-| Interface | Bootstrap 5 + Bootstrap Icons (CDN) |
-| Conteneur | Docker, build multi-étapes (`sdk:10.0` → `aspnet:10.0`), utilisateur non-root |
-| Registre d'images | Docker Hub |
-| Hébergement | AWS EC2 `t3.micro`, Amazon Linux 2023 |
-
-**Architecture**
-
-```
- Utilisateur (navigateur)
-        │  HTTP :80
-        ▼
- ┌──────────────────────── AWS ────────────────────────┐
- │  Security Group : 80 ouvert à tous, 22 = mon IP     │
- │  ┌──────────── Instance EC2 (t3.micro) ───────────┐ │
- │  │  Docker Engine                                 │ │
- │  │   └─ conteneur "taskflow"  (port 80 → 8080)    │ │
- │  │        └─ ASP.NET Core (Kestrel)               │ │
- │  │             └─ /app/data/tasks.db ◄── volume   │ │
- │  │                                     "taskdata" │ │
- │  └────────────────────────────────────────────────┘ │
- └─────────────────────────────────────────────────────┘
-        ▲
-        │ docker pull
- Docker Hub : asaph01/taskflow:1.0
-```
+| Application | C# 14, ASP.NET Core 10 Razor Pages + Minimal API |
+| Authentification | ASP.NET Core Identity (cookies, mots de passe hachés PBKDF2) |
+| Base de données | PostgreSQL 17 via Entity Framework Core 10 (Npgsql), migrations |
+| Interface | Bootstrap 5.3 servi localement, icônes SVG en sprite, JavaScript natif (glisser-déposer) |
+| Reverse proxy / HTTPS | Caddy 2 (Let's Encrypt automatique, HTTP/2 et HTTP/3, compression zstd/gzip) |
+| Conteneurs | Dockerfile multi-étapes (ReadyToRun, utilisateur non-root), Docker Compose |
+| Cloud | AWS EC2 t3.micro, Amazon Linux 2023, déploiement scripté avec AWS CLI |
 
 **Arborescence**
 
 ```
 TaskFlow/
-├── Program.cs              # Démarrage : base, pages, API, /health
-├── Models/                 # TaskItem (entité), TaskInput (saisie validée), Priority
-├── Persistence/            # DbContext EF Core, requêtes, données d'exemple
-├── Endpoints/TaskApi.cs    # API REST /api/tasks + /health
-├── Pages/                  # Interface Razor Pages (liste, création, modification)
-├── wwwroot/css/site.css
-├── Dockerfile              # Image multi-étapes
-├── docker-compose.yml      # Test en local
+├── Program.cs                  # Démarrage : PostgreSQL, Identity, pages, API, migrations
+├── Models/                     # Project, ProjectMember, TaskItem, AppUser, saisies validées
+├── Persistence/                # DbContext, migrations, règles d'accès, données de démo
+├── Endpoints/Api.cs            # API JSON + /health
+├── Pages/                      # Razor Pages : Account/, Projects/ (Board, Settings), Tasks/, Search
+├── TagHelpers.cs               # <icon>, <avatar>, <tag-chip>
+├── wwwroot/                    # CSS, JS (board.js : glisser-déposer), Bootstrap local
+├── Dockerfile
+├── docker-compose.yml          # Développement local : app + PostgreSQL
 └── deploy/
-    ├── aws-deploy.sh       # Création de l'infrastructure AWS en une commande (AWS CLI)
-    ├── aws-destroy.sh      # Suppression de toutes les ressources AWS
-    ├── user-data.sh        # Installation automatique de Docker + lancement du conteneur sur EC2
-    └── update.sh           # Mise à jour de la version déployée
+    ├── docker-compose.prod.yml # Production : Caddy + app + PostgreSQL
+    ├── Caddyfile               # HTTPS, en-têtes de sécurité, reverse proxy
+    ├── .env.example            # Variables (domaine, image, mot de passe PostgreSQL)
+    ├── user-data.sh            # Installation automatique au premier démarrage EC2
+    ├── update.sh               # Mise à jour sans perte de données (sur le serveur)
+    ├── aws-deploy.sh           # Création de l'infrastructure AWS en une commande
+    └── aws-destroy.sh          # Suppression de toutes les ressources AWS
 ```
 
-## 2. Lancer en local
+## 3. Lancer en local
 
-**Prérequis :** Docker Desktop (le SDK .NET n'est pas nécessaire, la compilation se fait dans Docker).
+Prérequis : Docker Desktop (le SDK .NET n'est pas nécessaire).
 
 ```bash
 docker compose up --build
 ```
 
-Ouvrir http://localhost:8081. Arrêter avec `Ctrl+C` puis `docker compose down`.
+Ouvrir http://localhost:8081 et se connecter avec `demo@taskflow.local` / `Demo1234`.
+Arrêter avec `docker compose down` (ajouter `-v` pour effacer aussi la base).
 
-> Avec le SDK .NET 10 installé, on peut aussi lancer `dotnet run` → http://localhost:5080.
-
-## 3. Publier l'image sur Docker Hub
-
-1. Créer un compte sur https://hub.docker.com (gratuit).
-2. Dans le dossier du projet :
+## 4. Publier l'image
 
 ```bash
-docker login
-docker build -t asaph01/taskflow:1.0 .
-docker push asaph01/taskflow:1.0
+docker build -t asaph01/taskflow:2.0 .
+docker push asaph01/taskflow:2.0
 ```
 
-3. Vérifier sur Docker Hub que le dépôt `taskflow` est **public** (sinon l'instance EC2 ne pourra pas le télécharger sans identifiants).
+## 5. Déployer sur AWS
 
-> ⚠️ Un PC Windows/Intel produit une image `linux/amd64`, compatible avec `t3.micro`.
-> Sur un Mac Apple Silicon, ajouter `--platform linux/amd64` au `docker build`.
+### En une commande (AWS CLI)
 
-## 4. Créer l'instance EC2
-
-### Option A — En une commande avec AWS CLI (méthode utilisée)
-
-Prérequis : [AWS CLI v2](https://aws.amazon.com/cli/) configuré avec `aws configure`
-(ou, pour AWS Academy / Learner Lab : copier le bloc *AWS CLI* de « AWS Details » dans `~/.aws/credentials`, région `us-east-1`).
-
-Depuis Git Bash, à la racine du projet :
+Prérequis : AWS CLI v2 connecté (`aws login`). Depuis Git Bash, à la racine du projet :
 
 ```bash
 ./deploy/aws-deploy.sh
 ```
 
-Le script :
-1. crée la paire de clés `taskflow-key` (clé privée enregistrée dans `taskflow-key.pem`, ignorée par git) ;
-2. crée le Security Group `taskflow-sg` : HTTP 80 ouvert à tous, SSH 22 limité à ton IP ;
-3. récupère la dernière AMI Amazon Linux 2023 (paramètre public SSM) ;
-4. lance une instance `t3.micro` nommée `taskflow-server` avec `deploy/user-data.sh` en données utilisateur ;
-5. attend que `http://<IP>/health` réponde et affiche l'URL publique.
+Le script crée la paire de clés `taskflow-key`, le Security Group `taskflow-sg` (80/443 publics, 22 limité à ton IP),
+lance une instance `t3.micro` Amazon Linux 2023 avec `deploy/user-data.sh`, puis attend que `https://<ip>.sslip.io/health` réponde.
+Il peut être relancé sans risque : il réutilise ce qui existe déjà.
 
-Le script peut être relancé sans risque : il réutilise ce qui existe déjà.
+`user-data.sh` installe Docker et Docker Compose, télécharge `docker-compose.prod.yml` et `Caddyfile` depuis ce dépôt,
+génère le fichier `.env` (domaine sslip.io, **mot de passe PostgreSQL aléatoire**) et démarre les conteneurs.
 
-**Sans rien installer : depuis AWS CloudShell** (icône `>_` en haut de la console AWS) :
+**Sans rien installer** : depuis AWS CloudShell (icône `>_` de la console) :
 
 ```bash
 git clone https://github.com/asaphfelix03-beep/taskflow.git && cd taskflow && MY_IP=<IP-de-ton-PC> ./deploy/aws-deploy.sh
 ```
 
-`MY_IP` limite le SSH à l'adresse de ton PC (sinon ce serait celle de CloudShell). La clé `taskflow-key.pem`
-est alors créée dans CloudShell : la récupérer via *Actions → Télécharger le fichier* (`taskflow/taskflow-key.pem`).
-
-### Option B — Dans la console AWS
-
-Console AWS → **EC2** → **Lancer une instance** :
-
-| Paramètre | Valeur |
-|---|---|
-| Nom | `taskflow-server` |
-| AMI | **Amazon Linux 2023** (64 bits x86) |
-| Type d'instance | **t3.micro** (ou t2.micro, éligibles à l'offre gratuite) |
-| Paire de clés | Créer une paire `taskflow-key`, type RSA, format `.pem` → le fichier se télécharge |
-| Réseau | Attribuer automatiquement une IP publique : **Activé** |
-| Security Group | Créer : **SSH (22)** source *Mon IP* + **HTTP (80)** source *0.0.0.0/0* (n'importe où) |
-| Stockage | 8 Go gp3 (par défaut) |
-| Détails avancés → **Données utilisateur** | Coller le contenu de `deploy/user-data.sh` |
-
-Cliquer **Lancer l'instance**, attendre que l'état soit *En cours d'exécution* et que les vérifications soient OK (2–3 min). Le script installe Docker et démarre le conteneur tout seul.
-
-## 5. Vérifier le déploiement
-
-Copier l'**adresse IPv4 publique** de l'instance, puis ouvrir dans un navigateur :
-
-- `http://<IP-PUBLIQUE>` → l'application
-- `http://<IP-PUBLIQUE>/health` → `{"status":"healthy", ...}`
-- `http://<IP-PUBLIQUE>/api/tasks` → la liste des tâches en JSON
-
-> Utiliser `http://` et non `https://` : l'application est servie en HTTP sur le port 80.
-
-### Se connecter en SSH (pour les captures `docker ps`, les logs…)
-
-Depuis PowerShell, dans le dossier où se trouve `taskflow-key.pem` :
-
-```powershell
-# Une seule fois : restreindre les droits du fichier, sinon SSH refuse la clé
-icacls .\taskflow-key.pem /inheritance:r
-icacls .\taskflow-key.pem /grant:r "$($env:USERNAME):(R)"
-
-ssh -i .\taskflow-key.pem ec2-user@<IP-PUBLIQUE>
-```
-
-Sur l'instance :
+### Vérifier
 
 ```bash
-docker ps                                 # le conteneur taskflow doit être "Up"
-docker logs taskflow                      # logs de l'application
-docker volume ls                          # le volume taskdata
-curl -s localhost/health                  # test local depuis l'instance
-sudo cat /var/log/cloud-init-output.log   # log du script User data
+ssh -i taskflow-key.pem ec2-user@<IP>
+cd /opt/taskflow
+sudo docker compose ps            # caddy, app, db : Up (db healthy)
+sudo docker compose logs -f app   # logs de l'application
+sudo docker compose logs caddy    # obtention du certificat HTTPS
 ```
 
-### Alternative sans User data (installation manuelle)
+## 6. Mettre à jour
 
-Si l'instance a été lancée sans le script, en SSH :
+1. Changer `<Version>` dans `TaskFlow.csproj`, puis `docker build -t asaph01/taskflow:2.1 .` et `docker push`.
+2. Sur le serveur : `sudo /opt/taskflow/update.sh 2.1`
 
-```bash
-sudo dnf install -y docker
-sudo systemctl enable --now docker
-sudo docker run -d --name taskflow --restart unless-stopped \
-  -p 80:8080 -v taskdata:/app/data asaph01/taskflow:1.0
-```
+Les données restent dans le volume `pgdata` ; les nouvelles migrations s'appliquent au démarrage.
 
-## 6. Tester l'API
+## 7. Sécurité
 
-```bash
-# Lister
-curl http://<IP-PUBLIQUE>/api/tasks
-curl "http://<IP-PUBLIQUE>/api/tasks?status=active"
+- **HTTPS** partout, redirection automatique, HSTS et en-têtes de sécurité (Caddyfile)
+- Mots de passe **hachés** (Identity), blocage du compte après 5 échecs, cookies `HttpOnly` et `SameSite`
+- Protection **CSRF** sur tous les formulaires et sur le glisser-déposer (jeton anti-falsification)
+- **Contrôle d'accès** centralisé (`Persistence/AccessQueries.cs`) : un utilisateur ne voit que les projets dont il est membre ;
+  les autres projets renvoient 404
+- Conteneur applicatif **non-root** ; PostgreSQL non exposé à Internet ; mot de passe généré sur le serveur, jamais dans Git
+- SSH limité à une seule adresse IP
 
-# Créer
-curl -X POST http://<IP-PUBLIQUE>/api/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Tester l API","priority":"High","dueDate":"2026-12-01"}'
+## 8. Captures d'écran pour le rapport
 
-# Modifier (id 4)
-curl -X PUT http://<IP-PUBLIQUE>/api/tasks/4 \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Tester l API","priority":"Normal","isDone":true}'
-
-# Supprimer
-curl -X DELETE http://<IP-PUBLIQUE>/api/tasks/4
-```
-
-Valeurs de `priority` : `Low`, `Normal`, `High`. Format de `dueDate` : `AAAA-MM-JJ`.
-
-## 7. Mettre à jour l'application
-
-1. Modifier le code, changer `<Version>` dans `TaskFlow.csproj` (ex. `1.1.0`).
-2. Sur le PC :
-   ```bash
-   docker build -t asaph01/taskflow:1.1 .
-   docker push asaph01/taskflow:1.1
-   ```
-3. Sur l'instance (copier `deploy/update.sh` ou le recréer avec `nano update.sh`) :
-   ```bash
-   chmod +x update.sh
-   ./update.sh asaph01/taskflow:1.1
-   ```
-
-Les tâches sont conservées : elles sont stockées dans le volume `taskdata`, pas dans le conteneur. La nouvelle version s'affiche en bas de page.
-
-## 8. Captures d'écran à fournir
-
-1. Docker Hub : le dépôt `taskflow` avec le tag `1.0`
-2. Console EC2 : l'instance *En cours d'exécution* avec son IP publique
-3. Security Group : règles entrantes 22 et 80
-4. Terminal SSH : `docker ps` et `docker images`
-5. Navigateur : `http://<IP-PUBLIQUE>` avec l'application (le pied de page affiche le nom du conteneur)
-6. Navigateur : `http://<IP-PUBLIQUE>/health`
+1. Docker Hub : le dépôt `asaph01/taskflow` avec les tags `1.0` et `2.0`
+2. Console EC2 : l'instance, son IP publique, les règles du Security Group (22, 80, 443)
+3. SSH : `sudo docker compose ps` (3 conteneurs) et `docker images`
+4. Navigateur : le **cadenas HTTPS**, le tableau Kanban, le tableau de bord
+5. `https://13-48-46-246.sslip.io/health`
 
 ## 9. Dépannage
 
 | Problème | Cause probable / solution |
 |---|---|
-| La page ne charge pas (timeout) | Port 80 absent du Security Group, ou `https://` utilisé au lieu de `http://` |
-| `docker ps` vide | Voir `sudo cat /var/log/cloud-init-output.log` (nom d'image erroné ? dépôt privé ?) |
-| `permission denied ... docker.sock` | Se déconnecter/reconnecter en SSH (groupe docker), ou préfixer avec `sudo` |
-| `exec format error` dans les logs | Image construite pour ARM : rebuild avec `--platform linux/amd64` |
-| `UNPROTECTED PRIVATE KEY FILE` | Lancer les commandes `icacls` de la section 5 |
-| L'IP change après un arrêt/redémarrage | Normal ; associer une **Elastic IP** pour une adresse fixe |
+| Erreur de certificat HTTPS au premier lancement | Caddy obtient le certificat en ~30 s ; vérifier `docker compose logs caddy` et que le port 80 est ouvert |
+| `/health` renvoie `unhealthy` | PostgreSQL ne répond pas : `docker compose ps db`, `docker compose logs db` |
+| Page blanche / 502 | L'application démarre encore ou a planté : `docker compose logs app` |
+| `permission denied ... docker.sock` | Préfixer avec `sudo`, ou se reconnecter en SSH (groupe docker) |
+| L'IP change après arrêt/redémarrage de l'instance | Le domaine sslip.io change aussi : associer une **Elastic IP** et mettre à jour `DOMAIN` dans `/opt/taskflow/.env` |
 
 ## 10. Nettoyage (éviter les frais)
-
-Après la notation, supprimer l'instance, le Security Group et la paire de clés :
 
 ```bash
 ./deploy/aws-destroy.sh
 ```
 
-Ou dans la console : EC2 → Instances → sélectionner l'instance → **État de l'instance → Résilier**.
-Supprimer aussi l'Elastic IP si une a été créée (une IP réservée non utilisée est facturée).
+Supprime l'instance, le Security Group et la paire de clés.

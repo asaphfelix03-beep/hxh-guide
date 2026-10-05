@@ -1,81 +1,147 @@
 @page
 @model IndexModel
 @{
-    ViewData["Title"] = "Mes tâches";
-    var today = DateOnly.FromDateTime(DateTime.Today);
-    var filters = new (string? Key, string Label, int Count)[]
-    {
-        (null, "Toutes", Model.AllCount),
-        ("active", "En cours", Model.ActiveCount),
-        ("done", "Terminées", Model.DoneCount),
-    };
+    ViewData["Title"] = User.Identity?.IsAuthenticated == true ? "Tableau de bord" : "Accueil";
 }
 
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-    <h1 class="h3 mb-0">Mes tâches</h1>
-    <a class="btn btn-primary" asp-page="/Tasks/Create"><i class="bi bi-plus-lg"></i> Nouvelle tâche</a>
+@if (User.Identity?.IsAuthenticated != true)
+{
+    <section class="hero text-center py-5">
+        <span class="brand-mark brand-mark-lg mb-3"><icon name="check2-square" /></span>
+        <h1 class="display-6 fw-bold mb-3">Les projets de votre équipe, au même endroit.</h1>
+        <p class="lead text-body-secondary mx-auto mb-4" style="max-width: 36rem">
+            Tableaux Kanban partagés, tâches assignées, échéances et étiquettes.
+            Simple, rapide, et hébergé sur AWS dans des conteneurs Docker.
+        </p>
+        <div class="d-flex justify-content-center gap-2 flex-wrap">
+            <a class="btn btn-primary btn-lg" href="/Account/Register">Créer un compte</a>
+            <a class="btn btn-outline-secondary btn-lg" href="/Account/Login">Se connecter</a>
+        </div>
+        @if (Model.DemoEnabled)
+        {
+            <p class="small text-body-secondary mt-3 mb-0">
+                Démo : <code>@SeedData.DemoEmail</code> / <code>@SeedData.DemoPassword</code>
+            </p>
+        }
+    </section>
+
+    <section class="row g-3 mt-2">
+        <div class="col-md-4">
+            <div class="feature card h-100"><div class="card-body">
+                <icon name="kanban" class="feature-icon" />
+                <h2 class="h6 mt-2">Tableau Kanban</h2>
+                <p class="small text-body-secondary mb-0">Glissez-déposez vos tâches de « À faire » à « Terminé ».</p>
+            </div></div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature card h-100"><div class="card-body">
+                <icon name="people" class="feature-icon" />
+                <h2 class="h6 mt-2">Travail en équipe</h2>
+                <p class="small text-body-secondary mb-0">Invitez des membres, assignez les tâches, suivez qui fait quoi.</p>
+            </div></div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature card h-100"><div class="card-body">
+                <icon name="clock" class="feature-icon" />
+                <h2 class="h6 mt-2">Échéances et priorités</h2>
+                <p class="small text-body-secondary mb-0">Votre tableau de bord montre ce qui est en retard ou urgent.</p>
+            </div></div>
+        </div>
+    </section>
+    return;
+}
+
+<div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-4">
+    <div>
+        <h1 class="h3 mb-0">Bonjour, @Model.DisplayName</h1>
+        <p class="text-body-secondary mb-0">@Model.Today.ToString("dddd d MMMM yyyy")</p>
+    </div>
+    <a class="btn btn-primary" href="/Projects#nouveau"><icon name="plus-lg" /> Nouveau projet</a>
 </div>
 
-<ul class="nav nav-pills mb-3">
-    @foreach (var filter in filters)
-    {
-        <li class="nav-item">
-            <a class="nav-link @(Model.Status == filter.Key ? "active" : "")" asp-page="/Index" asp-route-status="@filter.Key">
-                @filter.Label <span class="badge rounded-pill text-bg-light ms-1">@filter.Count</span>
-            </a>
-        </li>
-    }
-</ul>
-
-@if (Model.Tasks.Count == 0)
-{
-    <div class="text-center text-muted py-5 bg-white border rounded-3">
-        <i class="bi bi-inbox fs-1"></i>
-        <p class="mt-2 mb-0">Aucune tâche ici.</p>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat card h-100"><div class="card-body">
+            <div class="stat-label">Mes tâches ouvertes</div>
+            <div class="stat-value">@Model.OpenCount</div>
+        </div></div>
     </div>
-}
-else
-{
-    <div class="list-group shadow-sm">
-        @foreach (var task in Model.Tasks)
-        {
-            <div class="list-group-item d-flex gap-3 align-items-start py-3 @(task.IsDone ? "task-done" : "")">
-                <form method="post" asp-page-handler="Toggle" asp-route-id="@task.Id" asp-route-status="@Model.Status">
-                    <button type="submit" class="btn btn-link p-0 fs-4 task-toggle"
-                            title="@(task.IsDone ? "Remettre en cours" : "Marquer comme terminée")">
-                        <i class="bi @(task.IsDone ? "bi-check-circle-fill text-success" : "bi-circle text-secondary")"></i>
-                    </button>
-                </form>
+    <div class="col-6 col-lg-3">
+        <div class="stat card h-100 @(Model.OverdueCount > 0 ? "stat-danger" : "")"><div class="card-body">
+            <div class="stat-label">En retard</div>
+            <div class="stat-value">@Model.OverdueCount</div>
+        </div></div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat card h-100"><div class="card-body">
+            <div class="stat-label">À rendre sous 7 jours</div>
+            <div class="stat-value">@Model.DueSoonCount</div>
+        </div></div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat card h-100 stat-success"><div class="card-body">
+            <div class="stat-label">Terminées cette semaine</div>
+            <div class="stat-value">@Model.DoneThisWeekCount</div>
+        </div></div>
+    </div>
+</div>
 
-                <div class="flex-grow-1 min-w-0">
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                        <span class="fw-semibold task-title">@task.Title</span>
-                        <span class="badge priority-@task.Priority.ToString().ToLowerInvariant()">@task.Priority.Label()</span>
+<div class="row g-4">
+    <div class="col-lg-7">
+        <h2 class="h5 mb-3">Mes tâches</h2>
+        @if (Model.MyTasks.Count == 0)
+        {
+            <div class="empty-state">
+                <icon name="check-circle-fill" class="text-success" />
+                <p class="mb-0">Aucune tâche ouverte ne vous est assignée.</p>
+            </div>
+        }
+        else
+        {
+            <div class="list-group shadow-sm">
+                @foreach (var task in Model.MyTasks)
+                {
+                    <a class="list-group-item list-group-item-action d-flex gap-3 align-items-center py-3" href="/Tasks/Edit/@task.Id">
+                        <span class="state-dot state-@task.State.ToString().ToLowerInvariant()" title="@task.State.Label()"></span>
+                        <span class="flex-grow-1 min-w-0">
+                            <span class="d-block fw-semibold text-truncate">@task.Title</span>
+                            <span class="small text-body-secondary">@task.Project.Name · @task.State.Label()</span>
+                        </span>
+                        @if (task.Priority == Priority.High)
+                        {
+                            <span class="priority priority-high" title="Priorité haute"><icon name="flag-fill" /></span>
+                        }
                         @if (task.DueDate is { } due)
                         {
-                            <span class="small @(task.IsOverdue(today) ? "text-danger fw-semibold" : "text-muted")">
-                                <i class="bi bi-calendar-event"></i> @due.ToString("d MMM yyyy")
-                            </span>
+                            <span class="due small @(task.IsOverdue(Model.Today) ? "due-late" : "")"><icon name="calendar-event" /> @due.ToString("d MMM")</span>
                         }
-                    </div>
-                    @if (!string.IsNullOrWhiteSpace(task.Description))
-                    {
-                        <p class="mb-0 mt-1 small text-muted">@task.Description</p>
-                    }
-                </div>
-
-                <div class="d-flex gap-1">
-                    <a class="btn btn-sm btn-outline-secondary" asp-page="/Tasks/Edit" asp-route-id="@task.Id" title="Modifier">
-                        <i class="bi bi-pencil"></i>
                     </a>
-                    <form method="post" asp-page-handler="Delete" asp-route-id="@task.Id" asp-route-status="@Model.Status"
-                          onsubmit="return confirm('Supprimer cette tâche ?');">
-                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </form>
-                </div>
+                }
             </div>
         }
     </div>
-}
+
+    <div class="col-lg-5">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h2 class="h5 mb-0">Mes projets</h2>
+            <a class="small" href="/Projects">Tout voir</a>
+        </div>
+        @if (Model.Projects.Count == 0)
+        {
+            <div class="empty-state">
+                <icon name="kanban" />
+                <p class="mb-2">Vous n'avez pas encore de projet.</p>
+                <a class="btn btn-sm btn-primary" href="/Projects#nouveau">Créer un projet</a>
+            </div>
+        }
+        else
+        {
+            <div class="d-grid gap-3">
+                @foreach (var project in Model.Projects)
+                {
+                    <partial name="_ProjectCard" model="project" />
+                }
+            </div>
+        }
+    </div>
+</div>

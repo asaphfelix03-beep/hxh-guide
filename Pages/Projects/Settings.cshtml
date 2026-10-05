@@ -1,0 +1,115 @@
+@page "{id:int}"
+@model TaskFlow.Pages.Projects.SettingsModel
+@{
+    ViewData["Title"] = $"Paramètres · {Model.Project.Name}";
+}
+
+<nav aria-label="Fil d'Ariane" class="small mb-1">
+    <a href="/Projects">Projets</a> / <a href="/Projects/Board/@Model.Project.Id">@Model.Project.Name</a> /
+</nav>
+<h1 class="h3 mb-4">Paramètres du projet</h1>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Membres <span class="text-body-secondary fw-normal">(@Model.Members.Count)</span></h2>
+                <ul class="list-unstyled mb-0 member-list">
+                    @foreach (var member in Model.Members)
+                    {
+                        <li class="d-flex align-items-center gap-3 py-2">
+                            <avatar user-id="@member.UserId" name="@member.DisplayName" />
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-semibold text-truncate">
+                                    @member.DisplayName
+                                    @if (member.UserId == Model.CurrentUserId)
+                                    {
+                                        <span class="text-body-secondary fw-normal">(vous)</span>
+                                    }
+                                </div>
+                                <div class="small text-body-secondary text-truncate">@member.Email · @member.OpenTasks tâche(s) ouverte(s)</div>
+                            </div>
+                            @if (member.Role == ProjectRole.Owner)
+                            {
+                                <span class="badge text-bg-primary">Propriétaire</span>
+                            }
+                            else if (Model.IsOwner)
+                            {
+                                <form method="post" asp-page-handler="RemoveMember" asp-route-id="@Model.Project.Id" class="m-0"
+                                      data-confirm="Retirer @member.DisplayName du projet ?">
+                                    <input type="hidden" name="userId" value="@member.UserId" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Retirer du projet"><icon name="x-lg" /></button>
+                                </form>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-light border">Membre</span>
+                            }
+                        </li>
+                    }
+                </ul>
+
+                @if (Model.IsOwner)
+                {
+                    <form method="post" asp-page-handler="AddMember" asp-route-id="@Model.Project.Id" class="mt-3 pt-3 border-top">
+                        <label for="email" class="form-label"><icon name="person-plus" /> Ajouter un membre</label>
+                        <div class="input-group">
+                            <input type="email" id="email" name="email" class="form-control" placeholder="adresse e-mail de son compte" required />
+                            <button type="submit" class="btn btn-primary">Ajouter</button>
+                        </div>
+                        <div class="form-text">La personne doit déjà avoir un compte TaskFlow.</div>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        @if (Model.IsOwner)
+        {
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Informations</h2>
+                    <form method="post" asp-page-handler="Save" asp-route-id="@Model.Project.Id" novalidate>
+                        <div class="mb-3">
+                            <label asp-for="Input.Name" class="form-label"></label>
+                            <input asp-for="Input.Name" class="form-control" maxlength="80" />
+                            <span asp-validation-for="Input.Name" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Input.Description" class="form-label"></label>
+                            <textarea asp-for="Input.Description" class="form-control" rows="3" maxlength="300"></textarea>
+                            <span asp-validation-for="Input.Description" class="text-danger small"></span>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card border-danger-subtle">
+                <div class="card-body">
+                    <h2 class="h5 text-danger mb-2">Supprimer le projet</h2>
+                    <p class="small text-body-secondary">Toutes les tâches seront définitivement supprimées. Tapez <strong>@Model.Project.Name</strong> pour confirmer.</p>
+                    <form method="post" asp-page-handler="Delete" asp-route-id="@Model.Project.Id">
+                        <div class="input-group">
+                            <input name="confirmName" class="form-control" autocomplete="off" aria-label="Nom du projet" required />
+                            <button type="submit" class="btn btn-danger"><icon name="trash" /> Supprimer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-2">Quitter le projet</h2>
+                    <p class="small text-body-secondary">Vos tâches de ce projet ne vous seront plus assignées.</p>
+                    <form method="post" asp-page-handler="Leave" asp-route-id="@Model.Project.Id" data-confirm="Quitter le projet « @Model.Project.Name » ?">
+                        <button type="submit" class="btn btn-outline-danger"><icon name="box-arrow-right" /> Quitter</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>

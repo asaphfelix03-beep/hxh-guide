@@ -49,12 +49,18 @@ if [ "$SG_ID" = "None" ]; then
     --description "TaskFlow - HTTP public, SSH restreint" --query GroupId --output text)
   # MY_IP peut être fourni (ex. depuis CloudShell, pour autoriser l'IP de ton PC et non celle de CloudShell)
   MY_IP="${MY_IP:-$(curl -fs https://checkip.amazonaws.com | tr -d '[:space:]')}"
-  aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 80 --cidr 0.0.0.0/0 >/dev/null
   aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 22 --cidr "$MY_IP/32" >/dev/null
-  echo "==> Security Group $SG_ID créé (port 80 : tout le monde, port 22 : $MY_IP)"
+  echo "==> Security Group $SG_ID créé (SSH réservé à $MY_IP)"
 else
   echo "==> Security Group $SG_ID déjà existant"
 fi
+
+# Ports web ouverts à tous : 80 (redirection + validation Let's Encrypt), 443 TCP (HTTPS) et 443 UDP (HTTP/3).
+# Une règle déjà présente renvoie "Duplicate" : on l'ignore, le script peut être relancé.
+for rule in tcp:80 tcp:443 udp:443; do
+  aws ec2 authorize-security-group-ingress --group-id "$SG_ID" \
+    --protocol "${rule%%:*}" --port "${rule##*:}" --cidr 0.0.0.0/0 >/dev/null 2>&1 || true
+done
 
 # 3. Instance EC2 (réutilisée si elle tourne déjà)
 INSTANCE_ID=$(aws ec2 describe-instances \
@@ -88,13 +94,14 @@ PUBLIC_IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" \
   --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
 echo "==> Instance démarrée, IP publique : $PUBLIC_IP"
 
-# 4. Attente : le script User data installe Docker puis lance le conteneur (2 à 4 minutes)
+# 4. Attente : User data installe Docker, démarre les conteneurs, puis Caddy obtient le certificat (3 à 5 minutes)
+URL="https://${PUBLIC_IP//./-}.sslip.io"
 echo -n "==> Attente de l'application"
 for _ in $(seq 1 60); do
-  if curl -fs -m 5 "http://$PUBLIC_IP/health" >/dev/null 2>&1; then
+  if curl -fs -m 5 "$URL/health" >/dev/null 2>&1; then
     echo
-    echo "==> TaskFlow est en ligne : http://$PUBLIC_IP"
-    curl -s "http://$PUBLIC_IP/health"
+    echo "==> TaskFlow est en ligne : $URL"
+    curl -s "$URL/health"
     echo
     echo "==> SSH : ssh -i $KEY_NAME.pem ec2-user@$PUBLIC_IP"
     exit 0

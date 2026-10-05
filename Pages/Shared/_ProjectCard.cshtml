@@ -1,0 +1,29 @@
+@model ProjectSummary
+
+<a class="project-card card shadow-sm text-reset text-decoration-none" href="/Projects/Board/@Model.Id">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+            <h3 class="h6 mb-1 text-truncate">@Model.Name</h3>
+            <span class="avatar-stack">
+                @foreach (var member in Model.Members.Take(4))
+                {
+                    <avatar user-id="@member.Id" name="@member.Name" class="avatar-sm" />
+                }
+                @if (Model.Members.Count > 4)
+                {
+                    <span class="avatar avatar-sm avatar-more">+@(Model.Members.Count - 4)</span>
+                }
+            </span>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <p class="small text-body-secondary mb-2 text-truncate">@Model.Description</p>
+        }
+        <div class="d-flex align-items-center gap-2 small">
+            <div class="progress flex-grow-1" role="progressbar" aria-label="Avancement" aria-valuenow="@Model.Percent" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar" style="width: @Model.Percent%"></div>
+            </div>
+            <span class="text-body-secondary text-nowrap">@Model.DoneCount/@Model.TaskCount · @Model.Percent %</span>
+        </div>
+    </div>
+</a>

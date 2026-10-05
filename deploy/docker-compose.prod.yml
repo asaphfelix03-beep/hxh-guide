@@ -1,0 +1,50 @@
+# Production sur EC2 : 3 conteneurs sur un réseau privé Docker.
+#   caddy (ports 80/443, HTTPS automatique)  ->  app (8080, non exposé)  ->  db (5432, non exposé)
+# Variables dans le fichier .env voisin (voir .env.example).
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data      # certificats Let's Encrypt
+      - caddy_config:/config
+    depends_on:
+      - app
+
+  app:
+    image: ${IMAGE:-asaph01/taskflow:2.0}
+    restart: unless-stopped
+    environment:
+      ConnectionStrings__Default: "Host=db;Database=taskflow;Username=taskflow;Password=${POSTGRES_PASSWORD}"
+      Seed__Demo: ${SEED_DEMO:-true}
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"   # l'app sait que la requête d'origine était en HTTPS
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: taskflow
+      POSTGRES_USER: taskflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskflow -d taskflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

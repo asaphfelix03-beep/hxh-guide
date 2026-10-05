@@ -1,0 +1,36 @@
+body {
+    background-color: #f5f6fa;
+}
+
+.min-w-0 {
+    min-width: 0;
+}
+
+.task-toggle {
+    line-height: 1;
+    text-decoration: none;
+}
+
+.task-title {
+    overflow-wrap: anywhere;
+}
+
+.task-done .task-title {
+    text-decoration: line-through;
+    color: var(--bs-secondary-color);
+}
+
+.badge.priority-high {
+    background-color: #fde2e1;
+    color: #b42318;
+}
+
+.badge.priority-normal {
+    background-color: #e0e7ff;
+    color: #3538cd;
+}
+
+.badge.priority-low {
+    background-color: #eaecf0;
+    color: #475467;
+}

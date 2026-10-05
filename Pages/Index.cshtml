@@ -1,0 +1,81 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Mes tâches";
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var filters = new (string? Key, string Label, int Count)[]
+    {
+        (null, "Toutes", Model.AllCount),
+        ("active", "En cours", Model.ActiveCount),
+        ("done", "Terminées", Model.DoneCount),
+    };
+}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <h1 class="h3 mb-0">Mes tâches</h1>
+    <a class="btn btn-primary" asp-page="/Tasks/Create"><i class="bi bi-plus-lg"></i> Nouvelle tâche</a>
+</div>
+
+<ul class="nav nav-pills mb-3">
+    @foreach (var filter in filters)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(Model.Status == filter.Key ? "active" : "")" asp-page="/Index" asp-route-status="@filter.Key">
+                @filter.Label <span class="badge rounded-pill text-bg-light ms-1">@filter.Count</span>
+            </a>
+        </li>
+    }
+</ul>
+
+@if (Model.Tasks.Count == 0)
+{
+    <div class="text-center text-muted py-5 bg-white border rounded-3">
+        <i class="bi bi-inbox fs-1"></i>
+        <p class="mt-2 mb-0">Aucune tâche ici.</p>
+    </div>
+}
+else
+{
+    <div class="list-group shadow-sm">
+        @foreach (var task in Model.Tasks)
+        {
+            <div class="list-group-item d-flex gap-3 align-items-start py-3 @(task.IsDone ? "task-done" : "")">
+                <form method="post" asp-page-handler="Toggle" asp-route-id="@task.Id" asp-route-status="@Model.Status">
+                    <button type="submit" class="btn btn-link p-0 fs-4 task-toggle"
+                            title="@(task.IsDone ? "Remettre en cours" : "Marquer comme terminée")">
+                        <i class="bi @(task.IsDone ? "bi-check-circle-fill text-success" : "bi-circle text-secondary")"></i>
+                    </button>
+                </form>
+
+                <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="fw-semibold task-title">@task.Title</span>
+                        <span class="badge priority-@task.Priority.ToString().ToLowerInvariant()">@task.Priority.Label()</span>
+                        @if (task.DueDate is { } due)
+                        {
+                            <span class="small @(task.IsOverdue(today) ? "text-danger fw-semibold" : "text-muted")">
+                                <i class="bi bi-calendar-event"></i> @due.ToString("d MMM yyyy")
+                            </span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(task.Description))
+                    {
+                        <p class="mb-0 mt-1 small text-muted">@task.Description</p>
+                    }
+                </div>
+
+                <div class="d-flex gap-1">
+                    <a class="btn btn-sm btn-outline-secondary" asp-page="/Tasks/Edit" asp-route-id="@task.Id" title="Modifier">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <form method="post" asp-page-handler="Delete" asp-route-id="@task.Id" asp-route-status="@Model.Status"
+                          onsubmit="return confirm('Supprimer cette tâche ?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+}

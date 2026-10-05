@@ -1,0 +1,28 @@
+@model TaskInput
+@{
+    var priorities = Enum.GetValues<Priority>().Select(p => new SelectListItem(p.Label(), p.ToString()));
+}
+
+<div class="mb-3">
+    <label asp-for="Title" class="form-label"></label>
+    <input asp-for="Title" class="form-control" maxlength="100" autofocus />
+    <span asp-validation-for="Title" class="text-danger small"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Description" class="form-label"></label>
+    <textarea asp-for="Description" class="form-control" rows="3" maxlength="500"></textarea>
+    <span asp-validation-for="Description" class="text-danger small"></span>
+</div>
+
+<div class="row g-3">
+    <div class="col-sm-6">
+        <label asp-for="Priority" class="form-label"></label>
+        <select asp-for="Priority" asp-items="priorities" class="form-select"></select>
+    </div>
+    <div class="col-sm-6">
+        <label asp-for="DueDate" class="form-label"></label>
+        <input asp-for="DueDate" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" />
+        <span asp-validation-for="DueDate" class="text-danger small"></span>
+    </div>
+</div>

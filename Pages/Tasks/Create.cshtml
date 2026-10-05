@@ -1,0 +1,18 @@
+@page
+@model CreateModel
+@{
+    ViewData["Title"] = "Nouvelle tâche";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <h1 class="h3 mb-3">Nouvelle tâche</h1>
+        <form method="post" class="card card-body shadow-sm">
+            <partial name="_TaskForm" for="Input" />
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">Créer la tâche</button>
+                <a class="btn btn-outline-secondary" asp-page="/Index">Annuler</a>
+            </div>
+        </form>
+    </div>
+</div>

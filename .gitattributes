@@ -1,0 +1,2 @@
+# Les scripts shell doivent garder des fins de ligne Linux (LF), sinon bash échoue sur EC2.
+*.sh text eol=lf

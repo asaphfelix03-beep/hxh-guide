@@ -2,6 +2,12 @@
 
 Application web en **C# / ASP.NET Core (.NET 10)**, conteneurisée avec **Docker** et déployée sur une instance **AWS EC2**, accessible publiquement sur Internet.
 
+| | Lien |
+|---|---|
+| Code source | https://github.com/asaphfelix03-beep/taskflow |
+| Image Docker | https://hub.docker.com/r/asaph01/taskflow |
+| Application en ligne | http://&lt;IP-PUBLIQUE-EC2&gt; |
+
 ## 1. Présentation
 
 **Fonctionnalités**
@@ -56,7 +62,9 @@ TaskFlow/
 ├── Dockerfile              # Image multi-étapes
 ├── docker-compose.yml      # Test en local
 └── deploy/
-    ├── user-data.sh        # Installation automatique sur EC2
+    ├── aws-deploy.sh       # Création de l'infrastructure AWS en une commande (AWS CLI)
+    ├── aws-destroy.sh      # Suppression de toutes les ressources AWS
+    ├── user-data.sh        # Installation automatique de Docker + lancement du conteneur sur EC2
     └── update.sh           # Mise à jour de la version déployée
 ```
 
@@ -89,6 +97,28 @@ docker push asaph01/taskflow:1.0
 > Sur un Mac Apple Silicon, ajouter `--platform linux/amd64` au `docker build`.
 
 ## 4. Créer l'instance EC2
+
+### Option A — En une commande avec AWS CLI (méthode utilisée)
+
+Prérequis : [AWS CLI v2](https://aws.amazon.com/cli/) configuré avec `aws configure`
+(ou, pour AWS Academy / Learner Lab : copier le bloc *AWS CLI* de « AWS Details » dans `~/.aws/credentials`, région `us-east-1`).
+
+Depuis Git Bash, à la racine du projet :
+
+```bash
+./deploy/aws-deploy.sh
+```
+
+Le script :
+1. crée la paire de clés `taskflow-key` (clé privée enregistrée dans `taskflow-key.pem`, ignorée par git) ;
+2. crée le Security Group `taskflow-sg` : HTTP 80 ouvert à tous, SSH 22 limité à ton IP ;
+3. récupère la dernière AMI Amazon Linux 2023 (paramètre public SSM) ;
+4. lance une instance `t3.micro` nommée `taskflow-server` avec `deploy/user-data.sh` en données utilisateur ;
+5. attend que `http://<IP>/health` réponde et affiche l'URL publique.
+
+Le script peut être relancé sans risque : il réutilise ce qui existe déjà.
+
+### Option B — Dans la console AWS
 
 Console AWS → **EC2** → **Lancer une instance** :
 
@@ -209,5 +239,11 @@ Les tâches sont conservées : elles sont stockées dans le volume `taskdata`, p
 
 ## 10. Nettoyage (éviter les frais)
 
-Après la notation : EC2 → Instances → sélectionner l'instance → **État de l'instance → Résilier**.
+Après la notation, supprimer l'instance, le Security Group et la paire de clés :
+
+```bash
+./deploy/aws-destroy.sh
+```
+
+Ou dans la console : EC2 → Instances → sélectionner l'instance → **État de l'instance → Résilier**.
 Supprimer aussi l'Elastic IP si une a été créée (une IP réservée non utilisée est facturée).

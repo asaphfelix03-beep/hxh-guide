@@ -34,7 +34,7 @@ et, pour chaque lecteur, un **suivi de lecture tome par tome sans spoiler**. Ell
                │  HTTPS :443 (HTTP :80 → redirection)
                ▼
 ┌──────────────────────── AWS eu-north-1 ─────────────────────────┐
-│ Security Group : 80/443 ouverts, 22 limité à mon IP             │
+│ Security Group : 80/443 seulement (pas de SSH)                 │
 │ ┌──────────────── Instance EC2 t3.micro (AL2023) ─────────────┐ │
 │ │  Docker Compose — réseau privé                              │ │
 │ │                                                             │ │
@@ -47,7 +47,7 @@ et, pour chaque lecteur, un **suivi de lecture tome par tome sans spoiler**. Ell
 │ └─────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
                            ▲ docker pull
-              Docker Hub : asaph01/hxh-guide:1.0
+              Docker Hub : asaph01/hxh-guide:1.1
 ```
 
 - Seul **Caddy** est exposé. L'application et la base ne sont joignables que sur le réseau Docker interne.
@@ -101,34 +101,48 @@ Prérequis : AWS CLI v2 connecté (`aws login`). Depuis Git Bash, à la racine d
 ./deploy/aws-deploy.sh
 ```
 
-Le script crée la paire de clés `hxh-key`, le Security Group `hxh-sg` (80/443 publics, 22 limité à ton IP),
-lance une instance `t3.micro` avec `deploy/user-data.sh`, puis attend que `https://<ip>.sslip.io/health` réponde.
-`user-data.sh` installe Docker et Docker Compose, récupère la configuration depuis ce dépôt, génère le fichier `.env`
-(domaine, **mot de passe PostgreSQL aléatoire**) et démarre les conteneurs dans `/opt/hxh-guide`.
+Le script crée un rôle IAM minimal pour Systems Manager, le Security Group `hxh-sg` (80/443 uniquement),
+puis lance une instance `t3.micro` (disque chiffré, IMDSv2 obligatoire) avec `deploy/user-data.sh`,
+et attend que `https://<ip>.sslip.io/health` réponde. `user-data.sh` installe Docker et Docker Compose,
+récupère la configuration depuis ce dépôt, génère le fichier `.env` (domaine, **mot de passe PostgreSQL aléatoire**)
+et démarre les conteneurs dans `/opt/hxh-guide`.
 
-Vérifier sur le serveur :
+**Administration sans SSH**, par AWS Systems Manager :
 
 ```bash
-ssh -i hxh-key.pem ec2-user@<IP>
-cd /opt/hxh-guide && sudo docker compose ps
+aws ssm start-session --target <id-instance>          # terminal sur le serveur (plugin Session Manager)
+aws ssm send-command --instance-ids <id-instance> --document-name AWS-RunShellScript \
+  --parameters 'commands=["cd /opt/hxh-guide && docker compose ps"]'
 ```
 
-Mettre à jour : `docker build` + `docker push` d'un nouveau tag, puis sur le serveur `sudo /opt/hxh-guide/update.sh 1.1`.
+Mettre à jour : `docker build` + `docker push` d'un nouveau tag, puis sur le serveur `/opt/hxh-guide/update.sh 1.2`.
 
 ## 6. Sécurité
 
-- HTTPS partout, redirection automatique, HSTS et en-têtes de sécurité (Caddyfile)
-- Mots de passe hachés, compte bloqué après 5 échecs, cookies `HttpOnly` et `SameSite`
-- Protection **CSRF** sur tous les formulaires
-- Conteneur applicatif non-root ; PostgreSQL non exposé ; secrets générés sur le serveur, jamais dans Git ; SSH limité à une IP
+| Niveau | Mesure |
+|---|---|
+| Réseau AWS | Security Group : seuls 80 (redirection) et 443 (HTTPS, HTTP/3) sont ouverts. **Aucun port SSH**, service SSH désactivé |
+| Administration | AWS Systems Manager : accès authentifié par IAM et journalisé, sans clé SSH à protéger |
+| Instance | IMDSv2 obligatoire (protège les identifiants du rôle), rôle IAM minimal (`AmazonSSMManagedInstanceCore`), mises à jour de sécurité appliquées |
+| Transport | HTTPS Let's Encrypt, redirection HTTP → HTTPS, HSTS, TLS 1.2 minimum |
+| Conteneurs | Application non-root, système de fichiers en lecture seule, aucune capacité Linux, `no-new-privileges`, mémoire et journaux limités |
+| Réseau Docker | Base PostgreSQL sur un réseau interne sans accès Internet, injoignable depuis Caddy ; aucun port exposé hors 80/443 |
+| Secrets | Mot de passe PostgreSQL aléatoire généré sur le serveur (`.env`, lisible par root uniquement), jamais dans Git |
+| Application | CSP stricte (aucun script en ligne), `X-Frame-Options`, `Permissions-Policy`, en-tête `Server` masqué |
+| Comptes | Mots de passe hachés (PBKDF2), compte bloqué après 5 échecs, **10 tentatives/minute/IP** sur connexion et inscription |
+| Formulaires | Jeton anti-CSRF sur tous les envois, validation côté serveur, encodage HTML de tous les textes saisis (anti-XSS) |
+| Données | Requêtes paramétrées (EF Core, anti-injection SQL), redirections de connexion limitées au site (anti-redirection ouverte) |
+
+Limites connues : le compte de démonstration est public (n'importe qui peut y laisser des avis) ;
+l'inscription indique si une adresse est déjà utilisée.
 
 ## 7. Captures d'écran pour le rapport
 
-1. Docker Hub : `asaph01/hxh-guide`
-2. Console EC2 : l'instance, son IP, les règles du Security Group
-3. SSH : `sudo docker compose ps` (3 conteneurs)
+1. Docker Hub : `asaph01/hxh-guide` (tags 1.0 et 1.1)
+2. Console EC2 : l'instance, le Security Group (80/443 seulement), le rôle IAM
+3. Systems Manager → Fleet Manager : l'instance « Online » ; Run Command : `docker compose ps`
 4. Navigateur : le cadenas HTTPS, l'accueil, le classeur, une fiche d'arc masquée par le mode sans spoiler
-5. `https://13-48-46-246.sslip.io/health`
+5. Outils de développement → Réseau : les en-têtes de sécurité (CSP, HSTS)
 
 ## 8. Nettoyage
 
